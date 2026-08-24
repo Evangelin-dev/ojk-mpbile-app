@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform, Modal, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 
 export const Header: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -24,7 +26,10 @@ export const Header: React.FC = () => {
           </TouchableOpacity>
 
           {/* Auth buttons */}
-          <TouchableOpacity style={styles.candidateBtn}>
+          <TouchableOpacity 
+            style={styles.candidateBtn}
+            onPress={() => navigation.navigate('Login')}
+          >
             <Text style={styles.candidateBtnText}>CANDIDATE</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.employerBtn}>
