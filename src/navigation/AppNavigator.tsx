@@ -2,10 +2,35 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
+import BlogScreen from '../screens/BlogScreen';
+import BlogDetailScreen from '../screens/BlogDetailScreen';
+import BrowseJobsScreen from '../screens/BrowseJobsScreen';
+import JobDetailScreen from '../screens/JobDetailScreen';
 import Svg, { Path } from 'react-native-svg';
 
 const Tab = createBottomTabNavigator();
+const BlogStack = createNativeStackNavigator();
+const JobStack = createNativeStackNavigator();
+
+function BlogStackNavigator() {
+  return (
+    <BlogStack.Navigator screenOptions={{ headerShown: false }}>
+      <BlogStack.Screen name="BlogList" component={BlogScreen} />
+      <BlogStack.Screen name="BlogDetail" component={BlogDetailScreen} />
+    </BlogStack.Navigator>
+  );
+}
+
+function JobStackNavigator() {
+  return (
+    <JobStack.Navigator screenOptions={{ headerShown: false }}>
+      <JobStack.Screen name="JobList" component={BrowseJobsScreen} />
+      <JobStack.Screen name="JobDetail" component={JobDetailScreen} />
+    </JobStack.Navigator>
+  );
+}
 
 // Placeholder Screens for the other tabs
 const PlaceholderScreen = ({ title }: { title: string }) => (
@@ -57,12 +82,8 @@ export default function AppNavigator() {
         })}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Jobs">
-          {() => <PlaceholderScreen title="Jobs Screen" />}
-        </Tab.Screen>
-        <Tab.Screen name="Blog">
-          {() => <PlaceholderScreen title="Blog Screen" />}
-        </Tab.Screen>
+        <Tab.Screen name="Jobs" component={JobStackNavigator} />
+        <Tab.Screen name="Blog" component={BlogStackNavigator} />
         <Tab.Screen name="Profile">
           {() => <PlaceholderScreen title="Profile Screen" />}
         </Tab.Screen>
