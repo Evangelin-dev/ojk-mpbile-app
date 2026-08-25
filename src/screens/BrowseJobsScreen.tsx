@@ -10,14 +10,15 @@ import {
   Image,
   Modal,
   ScrollView,
-  Platform,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { fetchJobs } from '../api/auth';
+import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -47,6 +48,7 @@ const states = ["Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "U
 
 export default function BrowseJobsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,6 +181,18 @@ export default function BrowseJobsScreen() {
         />
       )}
 
+      {/* Post Job FAB for Employers */}
+      {user?.role === 'EMPLOYER' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('PostJob')}
+        >
+          <Svg width={24} height={24} fill="none" viewBox="0 0 24 24">
+            <Path d="M12 5v14m-7-7h14" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </TouchableOpacity>
+      )}
+
       {/* Filters Modal */}
       <Modal
         visible={showFilters}
@@ -274,7 +288,7 @@ export default function BrowseJobsScreen() {
             </ScrollView>
 
             <TouchableOpacity
-                style={styles.applyFiltersBtn}
+                style={[styles.applyFiltersBtn, { marginBottom: Platform.OS === 'ios' ? 20 : 0 }]}
                 onPress={() => {
                   setShowFilters(false);
                   loadJobs();
@@ -531,11 +545,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    marginBottom: Platform.OS === 'ios' ? 20 : 0,
   },
   applyFiltersText: {
     color: '#fff',
     fontWeight: '800',
     fontSize: 16,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f97316',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
 });

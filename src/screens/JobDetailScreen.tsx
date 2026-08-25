@@ -242,7 +242,7 @@ export default function JobDetailScreen() {
       </ScrollView>
 
       {/* Floating Apply Button for Bottom */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'ios' ? 32 : 16 }]}>
         <View style={styles.bottomPriceInfo}>
           <Text style={styles.bottomPriceLabel}>Salary up to</Text>
           <Text style={styles.bottomPriceValue}>₹{job.maxSalary.toLocaleString()}</Text>
@@ -461,7 +461,6 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#fff',
     padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
