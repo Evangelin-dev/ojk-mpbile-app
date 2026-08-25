@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
+import EmployerRegistrationScreen from '../screens/EmployerRegistrationScreen';
 import Svg, { Path } from 'react-native-svg';
 
 const Tab = createBottomTabNavigator();
@@ -80,6 +81,11 @@ export default function AppNavigator() {
         <Stack.Screen 
           name="Login" 
           component={LoginScreen}
+          options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen 
+          name="EmployerRegistration" 
+          component={EmployerRegistrationScreen}
           options={{ presentation: 'modal' }}
         />
       </Stack.Navigator>

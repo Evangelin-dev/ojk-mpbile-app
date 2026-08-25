@@ -30,3 +30,21 @@ export const verifyRegisterOtp = async (phone: string, otp: string, role: string
   });
   return response.data;
 };
+
+/**
+ * Create Employer Profile
+ * Endpoint: POST /api/employee/profile
+ * Requires multipart/form-data
+ */
+export const createEmployerProfile = async (formData: FormData, token: string) => {
+  const url = `${API_BASE_URL}/api/employee/profile`;
+  console.log('[API] POST', url);
+  const response = await axios.post(url, formData, {
+    headers: { 
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${token}`
+    },
+  });
+  return response.data;
+};
+

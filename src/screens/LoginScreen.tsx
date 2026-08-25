@@ -30,7 +30,7 @@ export default function LoginScreen() {
   const [localError, setLocalError] = useState('');
   const [debugCode, setDebugCode] = useState<string | number | null>(null);
   
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { login } = useAuth();
 
   useEffect(() => {
@@ -119,6 +119,19 @@ export default function LoginScreen() {
         setLocalError('This portal is for Employers. Please use the Candidate login.');
         setOtpSent(false);
         setOtp('');
+        return;
+      }
+
+      // Check if it's a new Employer that needs to complete registration
+      const isNewUser = payload.isNewUser || payload.hasProfile === false || payload?.user?.hasProfile === false;
+      
+      if (!isCandidate && isNewUser) {
+        console.log('[OTP] New Employer detected. Routing to registration...');
+        navigation.navigate('EmployerRegistration', { 
+          token: payload.token, 
+          phone, 
+          user: payload.user 
+        });
         return;
       }
 
