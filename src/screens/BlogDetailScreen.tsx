@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,12 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  Platform,
-  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import { Header } from '../components/Header';
+import { fetchBlogById } from '../api/auth';
 
 interface BlogItem {
   id: number;
@@ -28,9 +27,57 @@ interface BlogItem {
 export default function BlogDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { blog } = route.params as { blog: BlogItem };
+  const params = route.params as { blog?: BlogItem, id?: number };
 
-  if (!blog) return null;
+  const [blog, setBlog] = useState<BlogItem | null>(params.blog || null);
+  const [loading, setLoading] = useState(!params.blog);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!blog && (params.id || params.blog?.id)) {
+      loadBlog(params.id || params.blog?.id);
+    }
+  }, []);
+
+  const loadBlog = async (id: number | string) => {
+    try {
+      setLoading(true);
+      const data = await fetchBlogById(id);
+      // Handle both nested 'blog' key and direct object response
+      const blogData = data.blog || data;
+      setBlog(blogData);
+    } catch (err) {
+      console.error('Failed to fetch blog detail:', err);
+      setError('Failed to load the blog post.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.outerContainer}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#2563eb" />
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !blog) {
+    return (
+      <View style={styles.outerContainer}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error || 'Blog post not found.'}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold' }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.outerContainer}>

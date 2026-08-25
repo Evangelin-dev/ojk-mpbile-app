@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,14 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  Platform,
-  StatusBar,
+  ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import { Header } from '../components/Header';
+import { fetchJobById } from '../api/auth';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -50,10 +50,58 @@ interface Job {
 export default function JobDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { job } = route.params as { job: Job };
+  const params = route.params as { job?: Job, id?: number };
+
+  const [job, setJob] = useState<Job | null>(params.job || null);
+  const [loading, setLoading] = useState(!params.job);
+  const [error, setError] = useState<string | null>(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
 
-  if (!job) return null;
+  useEffect(() => {
+    if (!job && (params.id || params.job?.id)) {
+      loadJob(params.id || params.job?.id);
+    }
+  }, []);
+
+  const loadJob = async (id: number | string) => {
+    try {
+      setLoading(true);
+      const data = await fetchJobById(id);
+      // Handle both nested 'job' key and direct object response
+      const jobData = data.job || data;
+      setJob(jobData);
+    } catch (err) {
+      console.error('Failed to fetch job detail:', err);
+      setError('Failed to load job details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.outerContainer}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#2563eb" />
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <View style={styles.outerContainer}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error || 'Job not found.'}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
+            <Text style={{ color: '#2563eb', fontWeight: 'bold' }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.outerContainer}>

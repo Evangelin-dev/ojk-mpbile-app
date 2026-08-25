@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,13 @@ import {
   Modal,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { fetchJobs } from '../api/auth';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -41,58 +43,14 @@ interface Job {
   employer: Employer;
 }
 
-const dummyJobs: Job[] = [
-  {
-    id: 1,
-    jobTitle: "Business Development Executive",
-    jobType: "Full Time",
-    isNightShift: false,
-    location: "Mumbai, Maharashtra",
-    workLocation: "Work From Office",
-    officeAddress: "Andheri East, Mumbai",
-    minSalary: 25000,
-    maxSalary: 45000,
-    perks: ["Bonus", "PF", "Insurance"],
-    walkIn: true,
-    createdAt: "2026-08-20T10:00:00Z",
-    employer: { id: 1, companyName: "Tech Solutions Pvt Ltd", profileImage: "https://ui-avatars.com/api/?name=TS&background=0D8ABC&color=fff" },
-  },
-  {
-    id: 2,
-    jobTitle: "Customer Support Associate",
-    jobType: "Full Time",
-    isNightShift: true,
-    location: "Bangalore, Karnataka",
-    workLocation: "Work From Office",
-    officeAddress: "Electronic City, Bangalore",
-    minSalary: 18000,
-    maxSalary: 28000,
-    perks: ["Night Shift Allowance", "Transport"],
-    walkIn: false,
-    createdAt: "2026-08-22T09:00:00Z",
-    employer: { id: 2, companyName: "Global Connect BPO", profileImage: "https://ui-avatars.com/api/?name=GC&background=f59e0b&color=fff" },
-  },
-  {
-    id: 3,
-    jobTitle: "Field Sales Representative",
-    jobType: "Full Time",
-    isNightShift: false,
-    location: "Delhi, NCR",
-    workLocation: "Field Job",
-    officeAddress: "Connaught Place, Delhi",
-    minSalary: 20000,
-    maxSalary: 35000,
-    perks: ["Petrol Allowance", "Incentives"],
-    walkIn: true,
-    createdAt: "2026-08-23T14:00:00Z",
-    employer: { id: 3, companyName: "Retail Growth Hub", profileImage: "https://ui-avatars.com/api/?name=RG&background=10b981&color=fff" },
-  },
-];
-
 const states = ["Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "Uttar Pradesh"];
 
 export default function BrowseJobsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [locationTerm, setLocationTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -102,6 +60,35 @@ export default function BrowseJobsScreen() {
   const [selectedDate, setSelectedDate] = useState<string[]>([]);
   const [selectedWorkMode, setSelectedWorkMode] = useState<string[]>([]);
   const [selectedShift, setSelectedShift] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  const loadJobs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params: any = {
+        q: searchTerm,
+        location: locationTerm || selectedState,
+        datePosted: selectedDate,
+        workMode: selectedWorkMode,
+        shift: selectedShift,
+      };
+
+      const data = await fetchJobs(params);
+      // Handle both nested 'jobs' key and direct array response
+      const jobsData = Array.isArray(data) ? data : (data.jobs || []);
+      setJobs(jobsData);
+    } catch (err) {
+      console.error('Failed to fetch jobs:', err);
+      setError('Failed to load jobs.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleFilter = (list: string[], setList: (l: string[]) => void, item: string) => {
     if (list.includes(item)) {
@@ -155,6 +142,8 @@ export default function BrowseJobsScreen() {
               style={styles.input}
               value={searchTerm}
               onChangeText={setSearchTerm}
+              onSubmitEditing={loadJobs}
+              returnKeyType="search"
             />
           </View>
           <TouchableOpacity
@@ -169,18 +158,26 @@ export default function BrowseJobsScreen() {
       </View>
 
       <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Showing {dummyJobs.length} Jobs</Text>
+        <Text style={styles.resultsTitle}>Showing {jobs.length} Jobs</Text>
         <TouchableOpacity style={styles.shareBtn}>
             <Text style={styles.shareText}>Share</Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={dummyJobs}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
+      ) : error ? (
+        <Text style={{ textAlign: 'center', color: 'red', marginTop: 40 }}>{error}</Text>
+      ) : (
+        <FlatList
+          data={jobs}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          refreshing={loading}
+          onRefresh={loadJobs}
+        />
+      )}
 
       {/* Filters Modal */}
       <Modal
@@ -278,7 +275,10 @@ export default function BrowseJobsScreen() {
 
             <TouchableOpacity
                 style={styles.applyFiltersBtn}
-                onPress={() => setShowFilters(false)}
+                onPress={() => {
+                  setShowFilters(false);
+                  loadJobs();
+                }}
             >
               <Text style={styles.applyFiltersText}>Apply Filters</Text>
             </TouchableOpacity>
