@@ -9,23 +9,33 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { sendRegisterOtp, verifyRegisterOtp } from '../api/auth';
+import { useAuth } from '../context/AuthContext';
 
-export default function JobseekerLoginScreen() {
+export default function LoginScreen() {
+  const route = useRoute<any>();
+  const role: 'CANDIDATE' | 'EMPLOYER' = route.params?.role || 'CANDIDATE';
+  
+  const isCandidate = role === 'CANDIDATE';
+  const themeColor = isCandidate ? '#39b54a' : '#fbb040';
+  const titleText = isCandidate ? 'Candidate Login' : 'Employer Login';
+  const subtitleText = isCandidate ? 'Find jobs near your location' : 'Hire the best talent';
+
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [localError, setLocalError] = useState('');
+  const [debugCode, setDebugCode] = useState<string | number | null>(null);
   
   const navigation = useNavigation();
+  const { login } = useAuth();
 
   useEffect(() => {
     if (!otpSent) return;
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setInterval>;
     if (resendTimer > 0) {
       timer = setInterval(() => {
         setResendTimer((prev) => prev - 1);
@@ -44,19 +54,24 @@ export default function JobseekerLoginScreen() {
     
     setIsLoading(true);
     setLocalError('');
+    setDebugCode(null);
 
     try {
       const phone = `+91${mobile.trim()}`;
-      console.log('[OTP] Sending OTP to:', phone);
-      const result = await sendRegisterOtp(phone, 'CANDIDATE');
+      console.log(`[OTP] Sending OTP to: ${phone} as ${role}`);
+      const result = await sendRegisterOtp(phone, role);
       console.log('[OTP] Response:', JSON.stringify(result));
+      
+      // Check for debug_code in response
+      if (result?.debug_code) {
+        setDebugCode(result.debug_code);
+      }
       
       setOtpSent(true);
       setResendTimer(100);
     } catch (err: any) {
       console.log('[OTP] Error:', JSON.stringify(err?.response?.data || err?.message || err));
       
-      // Extract error message properly from axios error
       let errorMsg = 'Failed to send OTP';
       if (err?.response?.data) {
         const data = err.response.data;
@@ -68,7 +83,6 @@ export default function JobseekerLoginScreen() {
         errorMsg = err.message;
       }
       
-      // User exists scenario — still proceed to OTP screen
       if (errorMsg.toLowerCase().includes('exist')) {
         setOtpSent(true);
         setResendTimer(300);
@@ -91,27 +105,40 @@ export default function JobseekerLoginScreen() {
 
     try {
       const phone = `+91${mobile.trim()}`;
-      const payload = await verifyRegisterOtp(phone, otp, 'CANDIDATE');
+      const payload = await verifyRegisterOtp(phone, otp, role);
+      console.log('[OTP] Verify response:', JSON.stringify(payload));
 
-      if (payload?.user?.role === 'EMPLOYER') {
-        setLocalError('This portal is for Job Seekers. Please use the Employer portal to log in.');
+      // Role mismatch check
+      if (isCandidate && payload?.user?.role === 'EMPLOYER') {
+        setLocalError('This portal is for Job Seekers. Please use the Employer login.');
+        setOtpSent(false);
+        setOtp('');
+        return;
+      }
+      if (!isCandidate && payload?.user?.role === 'CANDIDATE') {
+        setLocalError('This portal is for Employers. Please use the Candidate login.');
         setOtpSent(false);
         setOtp('');
         return;
       }
 
-      if (payload.token) {
-        await AsyncStorage.setItem('token', payload.token);
-      }
-      if (payload.user) {
-        await AsyncStorage.setItem('user', JSON.stringify(payload.user));
+      if (payload.token && payload.user) {
+        await login(payload.token, payload.user);
       }
 
-      // Navigate back to the home/browse jobs screen upon success
       navigation.goBack();
       
     } catch (err: any) {
-      setLocalError(String(err));
+      let errorMsg = 'Verification failed';
+      if (err?.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') errorMsg = data;
+        else if (data.message) errorMsg = data.message;
+        else if (data.error) errorMsg = data.error;
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      setLocalError(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -120,8 +147,17 @@ export default function JobseekerLoginScreen() {
   const handleBack = () => {
     setOtpSent(false);
     setOtp('');
+    setDebugCode(null);
     setLocalError('');
     setResendTimer(0);
+  };
+
+  const dynamicStyles = {
+    card: { borderColor: themeColor + '4D' },
+    title: { color: themeColor },
+    label: { color: themeColor },
+    inputBorder: { borderColor: themeColor + '4D', backgroundColor: themeColor + '1A' },
+    button: { backgroundColor: themeColor },
   };
 
   return (
@@ -129,14 +165,19 @@ export default function JobseekerLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>Candidate Login</Text>
-        <Text style={styles.subtitle}>Find jobs near your location</Text>
+      <View style={[styles.card, dynamicStyles.card]}>
+        {/* Close button */}
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.closeBtnText}>✕</Text>
+        </TouchableOpacity>
+
+        <Text style={[styles.title, dynamicStyles.title]}>{titleText}</Text>
+        <Text style={styles.subtitle}>{subtitleText}</Text>
 
         {!otpSent ? (
           <>
-            <Text style={styles.label}>Mobile Number</Text>
-            <View style={styles.inputContainer}>
+            <Text style={[styles.label, dynamicStyles.label]}>Mobile Number</Text>
+            <View style={[styles.inputContainer, dynamicStyles.inputBorder]}>
               <Text style={styles.prefix}>+91</Text>
               <TextInput
                 style={styles.input}
@@ -147,14 +188,16 @@ export default function JobseekerLoginScreen() {
                 }}
                 keyboardType="number-pad"
                 placeholder="10-digit mobile number"
+                placeholderTextColor="#9ca3af"
                 maxLength={10}
+                autoFocus
               />
             </View>
 
             {localError ? <Text style={styles.errorText}>{localError}</Text> : null}
 
             <TouchableOpacity 
-              style={styles.button} 
+              style={[styles.button, dynamicStyles.button, (isLoading || mobile.length !== 10) && styles.buttonDisabled]} 
               onPress={handleSendOtp}
               disabled={isLoading || mobile.length !== 10}
             >
@@ -167,9 +210,9 @@ export default function JobseekerLoginScreen() {
           </>
         ) : (
           <>
-            <Text style={styles.label}>Enter OTP</Text>
+            <Text style={[styles.label, dynamicStyles.label]}>Enter OTP</Text>
             <TextInput
-              style={styles.otpInput}
+              style={[styles.otpInput, dynamicStyles.inputBorder]}
               value={otp}
               onChangeText={(text) => {
                 setOtp(text.replace(/[^0-9]/g, '').slice(0, 6));
@@ -177,9 +220,17 @@ export default function JobseekerLoginScreen() {
               }}
               keyboardType="number-pad"
               placeholder="000000"
+              placeholderTextColor="#9ca3af"
               maxLength={6}
               textAlign="center"
+              autoFocus
             />
+
+            {debugCode ? (
+              <Text style={styles.debugText}>
+                Debug OTP: <Text style={[styles.debugCode, { color: themeColor }]}>{String(debugCode)}</Text>
+              </Text>
+            ) : null}
             
             {localError ? <Text style={styles.errorText}>{localError}</Text> : null}
 
@@ -198,7 +249,7 @@ export default function JobseekerLoginScreen() {
             </View>
 
             <TouchableOpacity 
-              style={styles.button} 
+              style={[styles.button, dynamicStyles.button, (isLoading || otp.length !== 6) && styles.buttonDisabled]} 
               onPress={handleVerifyOtp}
               disabled={isLoading || otp.length !== 6}
             >
@@ -226,20 +277,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 24,
     padding: 24,
-    shadowColor: '#39b54a',
-    shadowOpacity: 0.15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
     borderWidth: 1,
-    borderColor: 'rgba(57, 181, 74, 0.3)',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '600',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#39b54a',
     textAlign: 'center',
     marginBottom: 4,
+    marginTop: 8,
   },
   subtitle: {
     fontSize: 15,
@@ -250,15 +317,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#39b54a',
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(57, 181, 74, 0.1)',
     borderWidth: 2,
-    borderColor: 'rgba(57, 181, 74, 0.3)',
     borderRadius: 8,
     marginBottom: 16,
     paddingHorizontal: 12,
@@ -276,18 +340,27 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   otpInput: {
-    backgroundColor: 'rgba(57, 181, 74, 0.1)',
     borderWidth: 2,
-    borderColor: 'rgba(57, 181, 74, 0.3)',
     borderRadius: 8,
     height: 56,
     fontSize: 24,
     letterSpacing: 8,
     color: '#1f2937',
-    marginBottom: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  debugText: {
+    fontSize: 13,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  debugCode: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   button: {
-    backgroundColor: '#39b54a',
     borderRadius: 8,
     height: 50,
     justifyContent: 'center',
@@ -298,6 +371,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
