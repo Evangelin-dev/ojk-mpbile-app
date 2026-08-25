@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, Modal, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, Platform, Modal, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
 
 export const Header: React.FC = () => {
   const navigation = useNavigation<any>();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  const getInitials = (name?: string) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -25,17 +31,45 @@ export const Header: React.FC = () => {
             </Svg>
           </TouchableOpacity>
 
-          {/* Auth buttons */}
-          <TouchableOpacity 
-            style={styles.candidateBtn}
-            onPress={() => navigation.navigate('Login')}
-          >
-            <Text style={styles.candidateBtnText}>CANDIDATE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.employerBtn}>
-            <Text style={styles.employerBtnText}>EMPLOYER</Text>
-          </TouchableOpacity>
-
+          {user ? (
+            /* Logged in — show user avatar & dropdown */
+            <View style={styles.userSection}>
+              <TouchableOpacity style={styles.avatarBtn} onPress={() => {/* Could open profile menu */}}>
+                <View style={[styles.avatar, { backgroundColor: user.role === 'EMPLOYER' ? '#fbb040' : '#39b54a' }]}>
+                  <Text style={styles.avatarText}>{getInitials(user.full_name || user.phone)}</Text>
+                </View>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName} numberOfLines={1}>
+                    {user.full_name || user.phone || 'User'}
+                  </Text>
+                  <Text style={styles.userRole}>
+                    {user.role === 'EMPLOYER' ? 'Employer' : 'Candidate'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+                <Svg width={18} height={18} fill="none" viewBox="0 0 24 24">
+                  <Path stroke="#ef4444" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </Svg>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* Not logged in — show login buttons */
+            <>
+              <TouchableOpacity
+                style={styles.candidateBtn}
+                onPress={() => navigation.navigate('Login', { role: 'CANDIDATE' })}
+              >
+                <Text style={styles.candidateBtnText}>CANDIDATE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.employerBtn}
+                onPress={() => navigation.navigate('Login', { role: 'EMPLOYER' })}
+              >
+                <Text style={styles.employerBtnText}>EMPLOYER</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -102,31 +136,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 11,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  // Logged in user styles
+  userSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  modalContent: {
-    flex: 1,
-    backgroundColor: '#fff',
-    marginTop: 80,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+  avatarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  closeBtn: {
-    alignSelf: 'flex-end',
-    padding: 8,
-    marginBottom: 12,
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  menuItem: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
   },
-  menuItemText: {
-    fontSize: 17,
-    color: '#374151',
+  userInfo: {
+    maxWidth: 100,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  userRole: {
+    fontSize: 10,
+    color: '#6b7280',
     fontWeight: '500',
+  },
+  logoutBtn: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#fef2f2',
   },
 });
