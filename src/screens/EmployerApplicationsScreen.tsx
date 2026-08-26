@@ -65,7 +65,8 @@ export default function EmployerApplicationsScreen() {
       setLoading(true);
       setError(null);
       const response = await fetchJobApplications(token);
-      setJobs(response.jobs || []);
+      // Accessing response.data.jobs to match the webapp's structure
+      setJobs(response.data?.jobs || response.jobs || []);
     } catch (err) {
       console.error("Failed to fetch applications:", err);
       setError("Could not load job applications.");
@@ -136,21 +137,23 @@ export default function EmployerApplicationsScreen() {
               <View key={app.id} style={styles.applicantCard}>
                 <View style={styles.applicantHeader}>
                   <View style={styles.avatarCircle}>
-                    <Text style={styles.avatarInitial}>{app.candidate.name.charAt(0)}</Text>
+                    <Text style={styles.avatarInitial}>
+                      {app.candidate?.name ? app.candidate.name.charAt(0) : '?'}
+                    </Text>
                   </View>
                   <View style={styles.applicantBasicInfo}>
-                    <Text style={styles.applicantName}>{app.candidate.name}</Text>
-                    <Text style={styles.applicantLocation}>{app.candidate.location}</Text>
+                    <Text style={styles.applicantName}>{app.candidate?.name || 'Unknown Candidate'}</Text>
+                    <Text style={styles.applicantLocation}>{app.candidate?.location || 'Location N/A'}</Text>
                   </View>
                 </View>
 
                 <View style={styles.applicantDetailRow}>
                   <Text style={styles.detailLabel}>Experience:</Text>
-                  <Text style={styles.detailValue}>{app.candidate.experienceYears} Years</Text>
+                  <Text style={styles.detailValue}>{app.candidate?.experienceYears || 0} Years</Text>
                 </View>
 
                 <View style={styles.skillsContainer}>
-                  {app.candidate.skills.slice(0, 5).map((skill, idx) => (
+                  {app.candidate?.skills?.slice(0, 5).map((skill, idx) => (
                     <View key={idx} style={styles.skillBadge}>
                       <Text style={styles.skillText}>{skill}</Text>
                     </View>

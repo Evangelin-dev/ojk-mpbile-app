@@ -70,7 +70,7 @@ export default function EmployerProfileScreen() {
     setLoading(true);
     try {
       const response = await fetchEmployerProfile(token);
-      const userProfile = response.profile;
+      const userProfile = response.data?.profile || response.profile;
 
       setProfileData(userProfile);
       setFormData({
@@ -172,9 +172,10 @@ export default function EmployerProfileScreen() {
 
       const response = await updateEmployerProfile(payload, token!);
 
-      if (response.profile) {
-        setProfileData(response.profile);
-        setProfileImagePreview(response.profile.profileImage);
+      const updatedProfile = response.data?.profile || response.profile;
+      if (updatedProfile) {
+        setProfileData(updatedProfile);
+        setProfileImagePreview(updatedProfile.profileImage);
       }
 
       Alert.alert("Success", "Profile saved successfully!");

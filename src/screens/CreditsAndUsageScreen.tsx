@@ -75,8 +75,9 @@ export default function CreditsAndUsageScreen() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchWalletUsage(token);
-      setWalletData(data);
+      const response = await fetchWalletUsage(token);
+      // Support both wrapped and unwrapped response structure
+      setWalletData(response.data || response);
     } catch (err: any) {
       console.error("Failed to fetch wallet usage:", err);
       setError(err?.message || "Could not load transaction history.");

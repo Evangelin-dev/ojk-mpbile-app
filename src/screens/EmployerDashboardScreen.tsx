@@ -43,7 +43,8 @@ export default function EmployerDashboardScreen() {
       setLoading(true);
       setError(null);
       const data = await fetchDashboardStats(token);
-      setStats(data.stats);
+      // Support both wrapped and unwrapped response structure
+      setStats(data.data?.stats || data.stats);
     } catch (err) {
       console.error("Dashboard data fetch failed", err);
       setError("Failed to load dashboard data");
