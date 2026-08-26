@@ -48,3 +48,20 @@ export const createEmployerProfile = async (formData: FormData, token: string) =
   return response.data;
 };
 
+/**
+ * Create Candidate Profile
+ * Endpoint: POST /api/candidate/profile
+ * Requires multipart/form-data
+ */
+export const createCandidateProfile = async (formData: FormData, token: string) => {
+  const url = `${API_BASE_URL}/api/candidate/profile`;
+  console.log('[API] POST', url);
+  const response = await axios.post(url, formData, {
+    headers: { 
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${token}`
+    },
+  });
+  return response.data;
+};
+

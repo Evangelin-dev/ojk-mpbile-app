@@ -122,17 +122,27 @@ export default function LoginScreen() {
         return;
       }
 
-      // Check if it's a new Employer that needs to complete registration
+      // Check if it's a new user that needs to complete registration
       const isNewUser = payload.isNewUser || payload.hasProfile === false || payload?.user?.hasProfile === false;
       
-      if (!isCandidate && isNewUser) {
-        console.log('[OTP] New Employer detected. Routing to registration...');
-        navigation.navigate('EmployerRegistration', { 
-          token: payload.token, 
-          phone, 
-          user: payload.user 
-        });
-        return;
+      if (isNewUser) {
+        if (!isCandidate) {
+          console.log('[OTP] New Employer detected. Routing to registration...');
+          navigation.navigate('EmployerRegistration', { 
+            token: payload.token, 
+            phone, 
+            user: payload.user 
+          });
+          return;
+        } else {
+          console.log('[OTP] New Candidate detected. Routing to registration...');
+          navigation.navigate('CandidateRegistration', { 
+            token: payload.token, 
+            phone, 
+            user: payload.user 
+          });
+          return;
+        }
       }
 
       if (payload.token && payload.user) {
