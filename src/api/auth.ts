@@ -7,11 +7,9 @@ const API_BASE_URL = rawBase.replace(/\/api\/?$/, '').replace(/\/$/, '');
 
 /**
  * Send OTP for login/registration
- * Endpoint: POST /api/auth/send-otp
  */
 export const sendRegisterOtp = async (phone: string, role: string) => {
   const url = `${API_BASE_URL}/api/auth/send-otp`;
-  console.log('[API] POST', url);
   const response = await axios.post(url, { phone, role }, {
     headers: { 'Content-Type': 'application/json' },
   });
@@ -20,11 +18,9 @@ export const sendRegisterOtp = async (phone: string, role: string) => {
 
 /**
  * Verify OTP for login/registration
- * Endpoint: POST /api/auth/verify-otp
  */
 export const verifyRegisterOtp = async (phone: string, otp: string, role: string) => {
   const url = `${API_BASE_URL}/api/auth/verify-otp`;
-  console.log('[API] POST', url);
   const response = await axios.post(url, { phone, otp, role }, {
     headers: { 'Content-Type': 'application/json' },
   });
@@ -40,7 +36,7 @@ export const createEmployerProfile = async (formData: FormData, token: string) =
   const url = `${API_BASE_URL}/api/employee/profile`;
   console.log('[API] POST', url);
   const response = await axios.post(url, formData, {
-    headers: { 
+    headers: {
       'Content-Type': 'multipart/form-data',
       'Authorization': `Bearer ${token}`
     },
@@ -57,7 +53,7 @@ export const createCandidateProfile = async (formData: FormData, token: string) 
   const url = `${API_BASE_URL}/api/candidate/profile`;
   console.log('[API] POST', url);
   const response = await axios.post(url, formData, {
-    headers: { 
+    headers: {
       'Content-Type': 'multipart/form-data',
       'Authorization': `Bearer ${token}`
     },
@@ -65,3 +61,50 @@ export const createCandidateProfile = async (formData: FormData, token: string) 
   return response.data;
 };
 
+
+/**
+ * Blogs
+ */
+export const fetchBlogs = async () => {
+  const url = `${API_BASE_URL}/api/blogs`;
+  const response = await axios.get(url);
+  return response.data;
+};
+
+export const fetchBlogById = async (id: number | string) => {
+  const url = `${API_BASE_URL}/api/blogs/${id}`;
+  const response = await axios.get(url);
+  return response.data;
+};
+
+/**
+ * Jobs
+ */
+export const fetchJobs = async (params: any = {}) => {
+  const url = `${API_BASE_URL}/api/public/jobs`;
+  const response = await axios.get(url, { params });
+  return response.data;
+};
+
+export const fetchJobById = async (id: number | string) => {
+  const url = `${API_BASE_URL}/api/public/jobs/${id}`;
+  const response = await axios.get(url);
+  return response.data;
+};
+
+export const fetchSimilarJobs = async (id: number | string) => {
+  const url = `${API_BASE_URL}/api/public/jobs/${id}/similar`;
+  const response = await axios.get(url);
+  return response.data;
+};
+
+export const applyForJob = async (jobId: number | string, formData: FormData, token: string) => {
+  const url = `${API_BASE_URL}/api/candidate/apply/${jobId}`;
+  const response = await axios.post(url, formData, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
