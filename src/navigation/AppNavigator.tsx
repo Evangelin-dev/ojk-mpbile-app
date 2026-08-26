@@ -14,7 +14,7 @@ import BrowseJobsScreen from '../screens/BrowseJobsScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import PostJobScreen from '../screens/PostJobScreen';
 import * as Placeholders from '../screens/PlaceholderScreens';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Text as SvgText } from 'react-native-svg';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -57,7 +57,7 @@ function CustomDrawerContent(props: any) {
         <View style={styles.logoRow}>
           <Svg width={40} height={40} viewBox="0 0 100 100">
             <Circle cx="50" cy="50" r="40" fill="#2563eb" />
-            <Text style={{ fill: '#fff', fontSize: 40, fontWeight: 'bold' }}>OJK</Text>
+            <SvgText fill="#fff" fontSize="30" fontWeight="bold" x="50" y="60" textAnchor="middle">OJK</SvgText>
           </Svg>
           <Text style={styles.logoText}>OJK JOBS</Text>
         </View>

@@ -111,7 +111,6 @@ export default function PostJobScreen() {
         Alert.alert("Error", "You must be logged in to post a job.");
         return;
       }
-why this page
       // Map jobTitle to title for the backend expectation
       const { jobTitle, ...otherFields } = formData;
       const payload = {
@@ -340,7 +339,7 @@ why this page
       case 3:
         return (
           <View style={styles.formSection}>
-             <Text style={styles.label}>Contact Preference</Text>
+            <Text style={styles.label}>Contact Preference</Text>
             <View style={styles.optionsGrid}>
               {CONTACT_PREFERENCE_OPTIONS.map((opt) => (
                 <TouchableOpacity

@@ -187,6 +187,7 @@ export default function CandidateRegistrationScreen() {
       // Preferences
       if (preferredJobType) formData.append('preferredJobType', preferredJobType);
       if (preferredWorkLocation) formData.append('preferredWorkLocation', preferredWorkLocation);
+      formData.append('location', preferredWorkLocation || 'Not specified');
 
       // Skills
       formData.append('skills', JSON.stringify(skills));
