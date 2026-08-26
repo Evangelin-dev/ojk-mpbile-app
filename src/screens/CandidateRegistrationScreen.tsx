@@ -42,6 +42,8 @@ export default function CandidateRegistrationScreen() {
   // Step 0: Basic Info
   const [fullName, setFullName] = useState(initialUser.full_name || '');
   const [jobCategory, setJobCategory] = useState<'white-collar' | 'blue-collar'>('white-collar');
+  const [profileType, setProfileType] = useState<'FRESHER' | 'EXPERIENCED'>('FRESHER');
+  const [keywords, setKeywords] = useState('');
   const [cvFile, setCvFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
 
   // Step 1: Experience
@@ -152,6 +154,12 @@ export default function CandidateRegistrationScreen() {
     if (step > 0) setStep(step - 1);
   };
 
+  const handleSkip = async () => {
+    // Save user with hasProfile: false and navigate home
+    await login(token, { ...initialUser, hasProfile: false });
+    navigation.navigate('MainTabs', { screen: 'Home' });
+  };
+
   const submitProfile = async () => {
     setIsLoading(true);
     setError('');
@@ -161,7 +169,8 @@ export default function CandidateRegistrationScreen() {
 
       // Basic Info
       formData.append('name', fullName);
-      formData.append('type', jobCategory);
+      formData.append('type', profileType); // 'FRESHER' or 'EXPERIENCED'
+      formData.append('keywords', keywords);
       
       if (cvFile) {
         formData.append('cv', {
@@ -176,9 +185,6 @@ export default function CandidateRegistrationScreen() {
       if (previousPosition) formData.append('previousPosition', previousPosition);
       if (experienceYears) formData.append('experienceYears', experienceYears);
       if (expectedSalary) formData.append('expectedSalary', expectedSalary);
-
-      // Add empty keywords to satisfy backend Prisma requirements
-      formData.append('keywords', '');
 
       // Education
       if (educationLevel) formData.append('education', educationLevel);
@@ -257,7 +263,12 @@ export default function CandidateRegistrationScreen() {
           <Text style={styles.closeBtnText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Candidate Setup</Text>
-        <Text style={styles.subtitle}>Step {step + 1} of {STEPS.length}</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.subtitle}>Step {step + 1} of {STEPS.length}</Text>
+          <TouchableOpacity onPress={handleSkip}>
+            <Text style={{ color: '#39b54a', fontWeight: 'bold' }}>Skip for now</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {renderStepIndicator()}
@@ -296,7 +307,37 @@ export default function CandidateRegistrationScreen() {
               </View>
 
               <View style={styles.field}>
-                <Text style={styles.label}>Upload CV {jobCategory === 'white-collar' && '*'}</Text>
+                <Text style={styles.label}>Profile Type *</Text>
+                <View style={styles.row}>
+                  <TouchableOpacity 
+                    style={[styles.toggleBtn, profileType === 'FRESHER' && styles.toggleBtnActive]}
+                    onPress={() => setProfileType('FRESHER')}
+                  >
+                    <Text style={[styles.toggleBtnText, profileType === 'FRESHER' && styles.toggleBtnTextActive]}>Fresher</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.toggleBtn, profileType === 'EXPERIENCED' && styles.toggleBtnActive]}
+                    onPress={() => setProfileType('EXPERIENCED')}
+                  >
+                    <Text style={[styles.toggleBtnText, profileType === 'EXPERIENCED' && styles.toggleBtnTextActive]}>Experienced</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Keywords</Text>
+                <TextInput
+                  style={styles.input}
+                  value={keywords}
+                  onChangeText={setKeywords}
+                  placeholder="e.g. React, Developer, Marketing"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Upload CV (PDF) {jobCategory === 'white-collar' ? '*' : '(Optional)'}
+                </Text>
                 <TouchableOpacity style={styles.uploadBtn} onPress={() => pickDocument('cv')}>
                   <Text style={styles.uploadBtnText}>
                     {cvFile ? cvFile.name : 'Choose PDF/Doc'}
@@ -358,12 +399,24 @@ export default function CandidateRegistrationScreen() {
             <View>
               <View style={styles.field}>
                 <Text style={styles.label}>Highest Education Level</Text>
-                <TextInput
-                  style={styles.input}
-                  value={educationLevel}
-                  onChangeText={setEducationLevel}
-                  placeholder="e.g. Bachelor's Degree"
-                />
+                <View style={styles.tagsContainer}>
+                  {[
+                    { label: '10th', value: 'TENTH' },
+                    { label: '12th', value: 'TWELFTH' },
+                    { label: 'ITI', value: 'ITI' },
+                    { label: 'Diploma', value: 'DIPLOMA' },
+                    { label: 'Graduate', value: 'GRADUATE' },
+                    { label: 'Post Graduate', value: 'POST_GRADUATE' },
+                  ].map(opt => (
+                    <TouchableOpacity 
+                      key={opt.value}
+                      style={[styles.tag, educationLevel === opt.value && styles.tagActive]}
+                      onPress={() => setEducationLevel(opt.value)}
+                    >
+                      <Text style={[styles.tagText, educationLevel === opt.value && styles.tagTextActive]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
               <View style={styles.field}>
                 <Text style={styles.label}>Field of Study</Text>
@@ -470,12 +523,17 @@ export default function CandidateRegistrationScreen() {
             <View>
               <View style={styles.field}>
                 <Text style={styles.label}>English Level</Text>
-                <TextInput
-                  style={styles.input}
-                  value={englishLevel}
-                  onChangeText={setEnglishLevel}
-                  placeholder="e.g. Fluent, Intermediate"
-                />
+                <View style={styles.tagsContainer}>
+                  {['Basic', 'Intermediate', 'Fluent', 'Native'].map(lvl => (
+                    <TouchableOpacity 
+                      key={lvl}
+                      style={[styles.tag, englishLevel === lvl && styles.tagActive]}
+                      onPress={() => setEnglishLevel(lvl)}
+                    >
+                      <Text style={[styles.tagText, englishLevel === lvl && styles.tagTextActive]}>{lvl}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
               <View style={styles.field}>
                 <Text style={styles.label}>Other Languages</Text>
@@ -720,12 +778,21 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tagActive: {
+    backgroundColor: '#39b54a',
+    borderColor: '#2f9e40',
   },
   tagText: {
     color: '#39b54a',
     fontSize: 13,
     fontWeight: '500',
     marginRight: 6,
+  },
+  tagTextActive: {
+    color: '#fff',
   },
   tagClose: {
     color: '#39b54a',
