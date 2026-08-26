@@ -12,9 +12,9 @@ export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
 
-  const handleDashboard = () => {
+  const handleProfile = () => {
     setIsMenuOpen(false);
-    navigation.navigate('Profile');
+    navigation.navigate('EmployerProfile');
   };
 
   const handleLogout = () => {
@@ -45,7 +45,7 @@ export const Header: React.FC = () => {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerBar}>
-          {/* Logo */}
+          {/* Logo Section - No Hamburger here per latest request */}
           <TouchableOpacity style={styles.logoWrap} onPress={() => navigation.navigate('Home')}>
             <Text style={styles.logoText}>OJK Jobs</Text>
           </TouchableOpacity>
@@ -102,7 +102,7 @@ export const Header: React.FC = () => {
         onRequestClose={() => setIsMenuOpen(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setIsMenuOpen(false)}>
-          <View style={[styles.menuPopup, { top: headerHeight }]}>
+          <View style={[styles.menuPopup, { top: headerHeight || 60 }]}>
             <View style={styles.menuHeader}>
               <Text style={styles.menuPhone}>{user?.phone || 'No phone'}</Text>
               <Text style={styles.menuRole}>{user?.role === 'EMPLOYER' ? 'Employer' : 'Candidate'}</Text>
@@ -110,11 +110,11 @@ export const Header: React.FC = () => {
 
             <View style={styles.divider} />
 
-            <TouchableOpacity style={styles.menuItem} onPress={handleDashboard}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleProfile}>
               <Svg width={20} height={20} fill="none" viewBox="0 0 24 24" style={{ marginRight: 12 }}>
-                <Path stroke="#4b5563" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                <Path stroke="#4b5563" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </Svg>
-              <Text style={styles.menuItemText}>Dashboard</Text>
+              <Text style={styles.menuItemText}>Profile</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
@@ -215,7 +215,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'transparent',

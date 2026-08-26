@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { publishJob } from '../api/employer';
 import Svg, { Path } from 'react-native-svg';
 import { Header } from '../components/Header';
+import { ArrowLeftIcon } from 'react-native-heroicons/outline';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -111,7 +112,6 @@ export default function PostJobScreen() {
         Alert.alert("Error", "You must be logged in to post a job.");
         return;
       }
-why this page
       // Map jobTitle to title for the backend expectation
       const { jobTitle, ...otherFields } = formData;
       const payload = {
@@ -409,6 +409,15 @@ why this page
   return (
     <View style={styles.container}>
       <Header />
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Jobs' })}
+          style={styles.topBackBtn}
+        >
+          <ArrowLeftIcon size={20} color="#ea580c" />
+          <Text style={styles.topBackBtnText}>Back to Jobs</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={styles.title}>Post a New Job</Text>
         {renderStepper()}
@@ -451,6 +460,21 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+  },
+  topBar: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: '#f9fafb',
+  },
+  topBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  topBackBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ea580c',
   },
   title: {
     fontSize: 24,
