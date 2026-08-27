@@ -108,3 +108,20 @@ export const applyForJob = async (jobId: number | string, formData: FormData, to
   });
   return response.data;
 };
+
+/**
+ * Contact Us
+ */
+export const sendContactMessage = async (formData: any) => {
+  const url = `${API_BASE_URL}/api/contact`;
+  const response = await axios.post(url, formData);
+  return response.data;
+};
+
+export const sendSupportTicket = async (formData: any, token: string) => {
+  const url = `${API_BASE_URL}/api/support`;
+  const response = await axios.post(url, formData, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return response.data;
+};

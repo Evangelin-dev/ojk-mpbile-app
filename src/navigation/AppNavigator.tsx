@@ -16,18 +16,29 @@ import EmployerProfileScreen from '../screens/EmployerProfileScreen';
 import EmployerDashboardScreen from '../screens/EmployerDashboardScreen';
 import EmployerApplicationsScreen from '../screens/EmployerApplicationsScreen';
 import CreditsAndUsageScreen from '../screens/CreditsAndUsageScreen';
+import EmployerPricingPlansScreen from '../screens/EmployerPricingPlansScreen';
+import ReportsDashboardScreen from '../screens/ReportsDashboardScreen';
+import SearchCandidatesScreen from '../screens/SearchCandidatesScreen';
+import CandidateSearchListScreen from '../screens/CandidateSearchListScreen';
+import SavedSearchesScreen from '../screens/SavedSearchesScreen';
 import MenuScreen from '../screens/MenuScreen';
+import BillingScreen from '../screens/BillingScreen';
+import ContactScreen from '../screens/ContactScreen';
 import Svg, { Path, Rect, Circle, Text as SvgText } from 'react-native-svg';
+import { useAuth } from '../context/AuthContext';
 import {
   Squares2X2Icon,
   BriefcaseIcon,
   UserGroupIcon,
   Bars3Icon,
+  NewspaperIcon,
+  ChatBubbleLeftIcon,
 } from 'react-native-heroicons/outline';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const JobStack = createNativeStackNavigator();
+const ActionsStack = createNativeStackNavigator();
 
 // Stack for Jobs
 function JobStackNavigator() {
@@ -39,7 +50,26 @@ function JobStackNavigator() {
   );
 }
 
+// Stack for Actions / Settings
+function ActionsStackNavigator() {
+  return (
+    <ActionsStack.Navigator screenOptions={{ headerShown: false }}>
+      <ActionsStack.Screen name="Menu" component={MenuScreen} />
+      <ActionsStack.Screen name="CreditsAndUsage" component={CreditsAndUsageScreen} />
+      <ActionsStack.Screen name="EmployerPricingPlans" component={EmployerPricingPlansScreen} />
+      <ActionsStack.Screen name="ReportsDashboard" component={ReportsDashboardScreen} />
+      <ActionsStack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
+      <ActionsStack.Screen name="SearchCandidates" component={SearchCandidatesScreen} />
+      <ActionsStack.Screen name="CandidateSearchList" component={CandidateSearchListScreen} />
+      <ActionsStack.Screen name="SavedSearches" component={SavedSearchesScreen} />
+      <ActionsStack.Screen name="Billing" component={BillingScreen} />
+    </ActionsStack.Navigator>
+  );
+}
+
 function TabNavigator() {
+  const { user } = useAuth();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -74,6 +104,10 @@ function TabNavigator() {
             return <Bars3Icon size={size} color={color} />;
           } else if (route.name === 'Dashboard') {
             return <Squares2X2Icon size={size} color={color} />;
+          } else if (route.name === 'Blog') {
+            return <NewspaperIcon size={size} color={color} />;
+          } else if (route.name === 'Contact') {
+            return <ChatBubbleLeftIcon size={size} color={color} />;
           }
         },
       })}
@@ -84,23 +118,31 @@ function TabNavigator() {
         component={JobStackNavigator}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // Reset the stack to the first screen when clicking the tab
             navigation.navigate('Jobs', { screen: 'JobList' });
           },
         })}
       />
-      <Tab.Screen name="Dashboard" component={EmployerDashboardScreen} />
-      <Tab.Screen name="Applications" component={EmployerApplicationsScreen} />
-      <Tab.Screen
-        name="Actions"
-        component={View}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate('Menu');
-          },
-        })}
-      />
+      {user && (
+        <Tab.Screen name="Dashboard" component={EmployerDashboardScreen} />
+      )}
+      {user ? (
+        <Tab.Screen name="Applications" component={EmployerApplicationsScreen} />
+      ) : (
+        <Tab.Screen name="Blog" component={BlogScreen} />
+      )}
+      {user ? (
+        <Tab.Screen
+          name="Actions"
+          component={ActionsStackNavigator}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              navigation.navigate('Actions', { screen: 'Menu' });
+            },
+          })}
+        />
+      ) : (
+        <Tab.Screen name="Contact" component={ContactScreen} />
+      )}
     </Tab.Navigator>
   );
 }
@@ -110,10 +152,9 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={TabNavigator} />
-        <Stack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
-        <Stack.Screen name="CreditsAndUsage" component={CreditsAndUsageScreen} />
-        <Stack.Screen name="Menu" component={MenuScreen} />
         <Stack.Screen name="PostJob" component={PostJobScreen} />
+        <Stack.Screen name="EmployerPricingPlans" component={EmployerPricingPlansScreen} />
+        <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
         <Stack.Screen
           name="Login" 
           component={LoginScreen}

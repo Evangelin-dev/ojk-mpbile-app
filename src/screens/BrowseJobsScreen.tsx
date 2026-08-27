@@ -19,6 +19,7 @@ import { Header } from '../components/Header';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { fetchJobs } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
+import EmployerJobsView from './EmployerJobsView';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -126,6 +127,15 @@ export default function BrowseJobsScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  if (user?.role === 'EMPLOYER') {
+    return (
+      <View style={styles.container}>
+        <Header />
+        <EmployerJobsView />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -407,12 +417,14 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 8,
   },
   infoText: {
     fontSize: 12,
     color: '#64748b',
+    flexShrink: 1,
   },
   salaryText: {
     fontSize: 14,
@@ -422,6 +434,7 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   badge: {

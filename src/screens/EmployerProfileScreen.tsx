@@ -31,7 +31,9 @@ import {
   InformationCircleIcon,
   PhoneIcon,
   PencilSquareIcon,
+  ChevronLeftIcon,
 } from 'react-native-heroicons/outline';
+import { useNavigation } from '@react-navigation/native';
 
 interface ApiEmployerProfile {
   id: number;
@@ -48,6 +50,7 @@ interface ApiEmployerProfile {
 }
 
 export default function EmployerProfileScreen() {
+  const navigation = useNavigation<any>();
   const { token } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -205,6 +208,11 @@ export default function EmployerProfileScreen() {
       <View style={styles.container}>
         <Header />
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <ChevronLeftIcon size={24} color="#f97316" />
+            <Text style={styles.backBtnText}>Back</Text>
+          </TouchableOpacity>
 
           {/* Header Card */}
           <View style={styles.headerCard}>
@@ -400,6 +408,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginLeft: -4,
+  },
+  backBtnText: {
+    fontSize: 16,
+    color: '#f97316',
+    fontWeight: '600',
   },
   // Header Card
   headerCard: {

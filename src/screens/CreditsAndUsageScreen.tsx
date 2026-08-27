@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   FlatList,
@@ -18,6 +17,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { fetchWalletUsage } from '../api/employer';
 import { useAuth } from '../context/AuthContext';
+import { Header } from '../components/Header';
 
 interface Transaction {
   id: string;
@@ -123,6 +123,16 @@ export default function CreditsAndUsageScreen() {
 
   const ListHeader = () => (
     <View>
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={styles.backButtonInline}
+      >
+        <ChevronLeftIcon size={20} color="#fbb040" />
+        <Text style={styles.backButtonText}>Back to Settings</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.pageTitle}>Credits & usage</Text>
+
       <View style={styles.topCards}>
         {/* Available Credits Card */}
         <View style={styles.balanceCard}>
@@ -176,13 +186,8 @@ export default function CreditsAndUsageScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ChevronLeftIcon size={24} color="#1e293b" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Credits & usage</Text>
-      </View>
+    <View style={styles.container}>
+      <Header />
 
       {loading && !walletData ? (
         <View style={styles.center}>
@@ -209,7 +214,7 @@ export default function CreditsAndUsageScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -217,23 +222,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF7E0',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
   },
-  header: {
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#253858',
+    marginBottom: 20,
+  },
+  backButtonInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 56,
-    backgroundColor: '#FFF7E0',
+    marginBottom: 16,
+    gap: 4,
   },
-  backBtn: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#253858',
+  backButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fbb040',
   },
   listContent: {
     padding: 16,

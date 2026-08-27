@@ -5,19 +5,16 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   StatusBar,
   TextInput,
+  Linking,
 } from 'react-native';
 import {
-  Squares2X2Icon,
   BriefcaseIcon,
-  UserGroupIcon,
   ChartBarIcon,
   TicketIcon,
   CreditCardIcon,
-  Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
@@ -28,17 +25,28 @@ import {
   CircleStackIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  ClipboardDocumentListIcon,
   BookmarkIcon,
   CalendarDaysIcon,
+  UserGroupIcon,
 } from 'react-native-heroicons/outline';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { Header } from '../components/Header';
+import SupportTicketModal from '../components/SupportTicketModal';
 
 export default function MenuScreen() {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [expandedSections, setExpandedItems] = useState<string[]>([]);
+  const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
+
+  const handleOpenURL = async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+    }
+  };
 
   const toggleExpand = (item: string) => {
     setExpandedItems(prev =>
@@ -81,20 +89,12 @@ export default function MenuScreen() {
     </View>
   );
 
-  const goToTab = (screenName: string) => {
-    navigation.navigate('MainTabs', { screen: screenName });
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ChevronLeftIcon size={24} color="#1e293b" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings and activity</Text>
-      </View>
+    <View style={styles.container}>
+      <Header />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.pageTitle}>Settings and activity</Text>
 
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
@@ -126,12 +126,12 @@ export default function MenuScreen() {
             <SubMenuItem
               label="Search Candidates"
               icon={<MagnifyingGlassIcon size={18} color="#64748b" />}
-              onPress={() => {}}
+              onPress={() => navigation.navigate('SearchCandidates')}
             />
             <SubMenuItem
               label="Saved Searches"
               icon={<BookmarkIcon size={18} color="#64748b" />}
-              onPress={() => {}}
+              onPress={() => navigation.navigate('SavedSearches')}
             />
           </View>
         )}
@@ -139,7 +139,7 @@ export default function MenuScreen() {
         <MenuItem
           icon={<ChartBarIcon size={22} color="#1e293b" />}
           label="Reports"
-          onPress={() => {}}
+          onPress={() => navigation.navigate('ReportsDashboard')}
         />
         <MenuItem
           icon={<TicketIcon size={22} color="#1e293b" />}
@@ -149,12 +149,12 @@ export default function MenuScreen() {
         <MenuItem
           icon={<CalendarDaysIcon size={22} color="#1e293b" />}
           label="Plans"
-          onPress={() => {}}
+          onPress={() => navigation.navigate('EmployerPricingPlans')}
         />
         <MenuItem
           icon={<CreditCardIcon size={22} color="#1e293b" />}
           label="Billing"
-          onPress={() => {}}
+          onPress={() => navigation.navigate('Billing')}
         />
 
         <SectionHeader title="Support & Settings" />
@@ -166,19 +166,22 @@ export default function MenuScreen() {
         />
         {expandedSections.includes('support') && (
           <View style={styles.subMenuContainer}>
-            <SubMenuItem label="FAQ" onPress={() => {}} />
-            <SubMenuItem label="Contact us" onPress={() => {}} />
+            <SubMenuItem
+              label="FAQ"
+              onPress={() => handleOpenURL('https://www.ojkjobs.com/support')}
+            />
+            <SubMenuItem label="Contact us" onPress={() => setIsSupportModalVisible(true)} />
             <SubMenuItem
                 label="Chat on Whatsapp"
                 icon={<ChatBubbleLeftRightIcon size={18} color="#16a34a" />}
-                onPress={() => {}}
+                onPress={() => handleOpenURL('https://api.whatsapp.com/send/?phone=918122577694&text&type=phone_number&app_absent=0')}
             />
           </View>
         )}
         <MenuItem
           icon={<PhoneIcon size={22} color="#1e293b" />}
           label="Contact Sales"
-          onPress={() => {}}
+          onPress={() => setIsSupportModalVisible(true)}
         />
 
         <View style={styles.divider} />
@@ -193,7 +196,12 @@ export default function MenuScreen() {
 
         <View style={{ height: 60 }} />
       </ScrollView>
-    </SafeAreaView>
+
+      <SupportTicketModal
+        visible={isSupportModalVisible}
+        onClose={() => setIsSupportModalVisible(false)}
+      />
+    </View>
   );
 }
 
@@ -201,24 +209,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backBtn: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '800',
     color: '#1e293b',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    marginBottom: 10,
   },
   searchContainer: {
     padding: 16,
