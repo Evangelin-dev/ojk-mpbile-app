@@ -30,7 +30,7 @@ export default function LoginScreen() {
   const [localError, setLocalError] = useState('');
   const [debugCode, setDebugCode] = useState<string | number | null>(null);
   
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { login } = useAuth();
 
   useEffect(() => {
@@ -120,6 +120,29 @@ export default function LoginScreen() {
         setOtpSent(false);
         setOtp('');
         return;
+      }
+
+      // Check if it's a new user that needs to complete registration
+      const isNewUser = payload.isNewUser || payload.hasProfile === false || payload?.user?.hasProfile === false;
+      
+      if (isNewUser) {
+        if (!isCandidate) {
+          console.log('[OTP] New Employer detected. Routing to registration...');
+          navigation.navigate('EmployerRegistration', { 
+            token: payload.token, 
+            phone, 
+            user: payload.user 
+          });
+          return;
+        } else {
+          console.log('[OTP] New Candidate detected. Routing to registration...');
+          navigation.navigate('CandidateRegistration', { 
+            token: payload.token, 
+            phone, 
+            user: payload.user 
+          });
+          return;
+        }
       }
 
       if (payload.token && payload.user) {

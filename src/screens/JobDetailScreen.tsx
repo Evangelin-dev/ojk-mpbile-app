@@ -9,11 +9,16 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
+import * as DocumentPicker from 'expo-document-picker';
 import { Header } from '../components/Header';
-import { fetchJobById } from '../api/auth';
+import { fetchJobById, applyForJob } from '../api/auth';
+import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -49,7 +54,8 @@ interface Job {
 
 export default function JobDetailScreen() {
   const route = useRoute();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const { user, token } = useAuth();
   const params = route.params as { job?: Job, id?: number };
 
   const [job, setJob] = useState<Job | null>(params.job || null);
@@ -57,9 +63,32 @@ export default function JobDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
 
+  // Apply modal state
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [newCvFile, setNewCvFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [applying, setApplying] = useState(false);
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setNewCvFile(result.assets[0]);
+      }
+    } catch (err) {
+      console.log('Error picking document', err);
+    }
+  };
+
   useEffect(() => {
-    if (!job && (params.id || params.job?.id)) {
-      loadJob(params.id || params.job?.id);
+    const jobId = params.id || params.job?.id;
+    if (!job && jobId) {
+      loadJob(jobId);
     }
   }, []);
 
@@ -76,6 +105,78 @@ export default function JobDetailScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApplyPress = () => {
+    // 1. Check if user is logged in
+    if (!user || !token) {
+      Alert.alert(
+        'Login Required',
+        'You need to log in as a Candidate to apply for this job.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => navigation.navigate('Login') },
+        ]
+      );
+      return;
+    }
+
+    // 2. Check if user is a candidate
+    if (user.role !== 'CANDIDATE') {
+      Alert.alert('Not Allowed', 'Only candidates can apply for jobs. Please log in as a candidate.');
+      return;
+    }
+
+    // 3. Check if profile is completed
+    const hasProfile = user.hasProfile === true || user.candidateProfile != null;
+    if (!hasProfile) {
+      setShowProfileModal(true);
+      return;
+    }
+
+    // 4. Show apply modal
+    setShowApplyModal(true);
+  };
+
+  const handleSubmitApplication = async () => {
+    if (!job || !token) return;
+
+    setApplying(true);
+    try {
+      const formData = new FormData();
+      // React Native throws a "Network Error" if FormData is completely empty.
+      // Append a dummy field so the request always goes through to the backend.
+      formData.append('mobile_application', 'true');
+      
+      if (coverLetter) formData.append('coverLetter', coverLetter);
+      if (newCvFile) {
+        formData.append('cv', {
+          uri: Platform.OS === 'ios' ? newCvFile.uri.replace('file://', '') : newCvFile.uri,
+          name: newCvFile.name,
+          type: newCvFile.mimeType || 'application/pdf',
+        } as any);
+      }
+
+      const result = await applyForJob(job.id, formData, token);
+      setShowApplyModal(false);
+      setCoverLetter('');
+      setNewCvFile(null);
+      Alert.alert('Success! 🎉', result.message || 'Your application has been submitted successfully!');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to apply';
+      Alert.alert('Error', msg);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleCompleteProfile = () => {
+    setShowProfileModal(false);
+    navigation.navigate('CandidateRegistration', {
+      token,
+      phone: user?.phone,
+      user,
+    });
   };
 
   if (loading) {
@@ -164,7 +265,7 @@ export default function JobDetailScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.applyButtonMain}>
+          <TouchableOpacity style={styles.applyButtonMain} onPress={handleApplyPress}>
             <Text style={styles.applyButtonText}>Apply Now</Text>
           </TouchableOpacity>
         </View>
@@ -247,10 +348,107 @@ export default function JobDetailScreen() {
           <Text style={styles.bottomPriceLabel}>Salary up to</Text>
           <Text style={styles.bottomPriceValue}>₹{job.maxSalary.toLocaleString()}</Text>
         </View>
-        <TouchableOpacity style={styles.bottomApplyBtn}>
+        <TouchableOpacity style={styles.bottomApplyBtn} onPress={handleApplyPress}>
           <Text style={styles.bottomApplyText}>Apply Now</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Profile Incomplete Modal */}
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalIconContainer}>
+              <Svg width={48} height={48} fill="none" viewBox="0 0 24 24">
+                <Path d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" stroke="#f59e0b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </View>
+            <Text style={styles.modalTitle}>Complete Your Profile</Text>
+            <Text style={styles.modalDesc}>
+              You need to complete your candidate profile before applying for jobs. This helps employers understand your skills and experience.
+            </Text>
+            <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleCompleteProfile}>
+              <Text style={styles.modalPrimaryBtnText}>Complete Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalSecondaryBtn} onPress={() => setShowProfileModal(false)}>
+              <Text style={styles.modalSecondaryBtnText}>Maybe Later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Apply Confirmation Modal */}
+      <Modal
+        visible={showApplyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowApplyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Apply for {job?.jobTitle}</Text>
+            <Text style={styles.modalDesc}>
+              at {job?.employer?.companyName}
+            </Text>
+
+            <View style={{ width: '100%', marginTop: 16 }}>
+              <Text style={styles.modalFieldLabel}>Resume/CV</Text>
+              {newCvFile ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#f3f4f6', borderRadius: 8, marginBottom: 12 }}>
+                  <Text style={{ flex: 1, color: '#374151', fontSize: 14 }} numberOfLines={1}>{newCvFile.name}</Text>
+                  <TouchableOpacity onPress={() => setNewCvFile(null)}>
+                    <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ marginBottom: 12 }}>
+                  {user?.hasProfile ? (
+                    <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                      Using CV from your profile. You can upload a new one below.
+                    </Text>
+                  ) : null}
+                  <TouchableOpacity style={styles.uploadBtn} onPress={pickDocument}>
+                    <Text style={styles.uploadBtnText}>Upload New CV</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <View style={{ width: '100%', marginTop: 8 }}>
+              <Text style={styles.modalFieldLabel}>Cover Letter (Optional)</Text>
+              <TextInput
+                style={styles.modalTextarea}
+                placeholder="Tell the employer why you're a great fit..."
+                placeholderTextColor="#9ca3af"
+                value={coverLetter}
+                onChangeText={setCoverLetter}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalPrimaryBtn, applying && { opacity: 0.7 }]}
+              onPress={handleSubmitApplication}
+              disabled={applying}
+            >
+              {applying ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalPrimaryBtnText}>Submit Application</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalSecondaryBtn} onPress={() => setShowApplyModal(false)}>
+              <Text style={styles.modalSecondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -494,5 +692,104 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#fffbeb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  uploadBtn: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#39b54a',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    backgroundColor: '#f0fdf4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 16,
+  },
+  uploadBtnText: {
+    color: '#39b54a',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalFieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  modalTextarea: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: '#1f2937',
+    backgroundColor: '#f9fafb',
+    minHeight: 100,
+  },
+  modalPrimaryBtn: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 14,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  modalPrimaryBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalSecondaryBtn: {
+    marginTop: 12,
+    paddingVertical: 10,
+  },
+  modalSecondaryBtnText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

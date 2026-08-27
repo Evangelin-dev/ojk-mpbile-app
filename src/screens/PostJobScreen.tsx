@@ -340,7 +340,7 @@ export default function PostJobScreen() {
       case 3:
         return (
           <View style={styles.formSection}>
-             <Text style={styles.label}>Contact Preference</Text>
+            <Text style={styles.label}>Contact Preference</Text>
             <View style={styles.optionsGrid}>
               {CONTACT_PREFERENCE_OPTIONS.map((opt) => (
                 <TouchableOpacity

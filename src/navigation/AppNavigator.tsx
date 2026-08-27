@@ -5,6 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
+import EmployerRegistrationScreen from '../screens/EmployerRegistrationScreen';
+import CandidateRegistrationScreen from '../screens/CandidateRegistrationScreen';
 import BlogScreen from '../screens/BlogScreen';
 import BlogDetailScreen from '../screens/BlogDetailScreen';
 import BrowseJobsScreen from '../screens/BrowseJobsScreen';
@@ -115,6 +117,16 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Login" 
           component={LoginScreen}
+          options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="EmployerRegistration"
+          component={EmployerRegistrationScreen}
+          options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="CandidateRegistration"
+          component={CandidateRegistrationScreen}
           options={{ presentation: 'modal' }}
         />
       </Stack.Navigator>
