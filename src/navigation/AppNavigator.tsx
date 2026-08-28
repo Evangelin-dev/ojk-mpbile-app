@@ -15,6 +15,11 @@ import PostJobScreen from '../screens/PostJobScreen';
 import EmployerProfileScreen from '../screens/EmployerProfileScreen';
 import EmployerDashboardScreen from '../screens/EmployerDashboardScreen';
 import EmployerApplicationsScreen from '../screens/EmployerApplicationsScreen';
+import CandidateApplicationsScreen from '../screens/CandidateApplicationsScreen';
+import CandidateProfileScreen from '../screens/CandidateProfileScreen';
+import CandidateDashboardScreen from '../screens/CandidateDashboardScreen';
+import LearningScreen from '../screens/LearningScreen';
+import ResumeBuilderScreen from '../screens/ResumeBuilderScreen';
 import CreditsAndUsageScreen from '../screens/CreditsAndUsageScreen';
 import EmployerPricingPlansScreen from '../screens/EmployerPricingPlansScreen';
 import ReportsDashboardScreen from '../screens/ReportsDashboardScreen';
@@ -39,6 +44,26 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const JobStack = createNativeStackNavigator();
 const ActionsStack = createNativeStackNavigator();
+const DashboardStack = createNativeStackNavigator();
+
+// Stack for Dashboard (to keep bottom navbar)
+function DashboardStackNavigator() {
+  const { user } = useAuth();
+  return (
+    <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
+      {user?.role === 'EMPLOYER' ? (
+        <DashboardStack.Screen name="EmployerDashboard" component={EmployerDashboardScreen} />
+      ) : (
+        <>
+          <DashboardStack.Screen name="CandidateDashboard" component={CandidateDashboardScreen} />
+          <DashboardStack.Screen name="Learning" component={LearningScreen} />
+          <DashboardStack.Screen name="ResumeBuilder" component={ResumeBuilderScreen} />
+          <DashboardStack.Screen name="CandidateProfile" component={CandidateProfileScreen} />
+        </>
+      )}
+    </DashboardStack.Navigator>
+  );
+}
 
 // Stack for Jobs
 function JobStackNavigator() {
@@ -94,7 +119,7 @@ function TabNavigator() {
                 <Path stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </Svg>
             );
-          } else if (route.name === 'Applications') {
+          } else if (route.name === 'Applications' || route.name === 'My Application') {
             return (
               <Svg width={size} height={size} fill="none" viewBox="0 0 24 24">
                 <Path stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -113,33 +138,81 @@ function TabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen
-        name="Jobs"
-        component={JobStackNavigator}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            navigation.navigate('Jobs', { screen: 'JobList' });
-          },
-        })}
-      />
-      {user && (
-        <Tab.Screen name="Dashboard" component={EmployerDashboardScreen} />
-      )}
+
       {user ? (
-        <Tab.Screen name="Applications" component={EmployerApplicationsScreen} />
+        user.role === 'EMPLOYER' ? (
+          <Tab.Screen
+            name="Jobs"
+            component={JobStackNavigator}
+            listeners={({ navigation }) => ({
+              tabPress: (e) => {
+                navigation.navigate('Jobs', { screen: 'JobList' });
+              },
+            })}
+          />
+        ) : (
+          <Tab.Screen name="My Application" component={CandidateApplicationsScreen} />
+        )
       ) : (
-        <Tab.Screen name="Blog" component={BlogScreen} />
-      )}
-      {user ? (
         <Tab.Screen
-          name="Actions"
-          component={ActionsStackNavigator}
+          name="Jobs"
+          component={JobStackNavigator}
           listeners={({ navigation }) => ({
             tabPress: (e) => {
-              navigation.navigate('Actions', { screen: 'Menu' });
+              navigation.navigate('Jobs', { screen: 'JobList' });
             },
           })}
         />
+      )}
+
+      {user && (
+        <Tab.Screen
+          name="Dashboard"
+          component={DashboardStackNavigator}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              if (user?.role === 'EMPLOYER') {
+                navigation.navigate('Dashboard', { screen: 'EmployerDashboard' });
+              } else {
+                navigation.navigate('Dashboard', { screen: 'CandidateDashboard' });
+              }
+            },
+          })}
+        />
+      )}
+
+      {user ? (
+        user.role === 'EMPLOYER' ? (
+          <Tab.Screen name="Applications" component={EmployerApplicationsScreen} />
+        ) : (
+          <Tab.Screen
+            name="Jobs"
+            component={JobStackNavigator}
+            listeners={({ navigation }) => ({
+              tabPress: (e) => {
+                navigation.navigate('Jobs', { screen: 'JobList' });
+              },
+            })}
+          />
+        )
+      ) : (
+        <Tab.Screen name="Blog" component={BlogScreen} />
+      )}
+
+      {user ? (
+        user.role === 'EMPLOYER' ? (
+          <Tab.Screen
+            name="Actions"
+            component={ActionsStackNavigator}
+            listeners={({ navigation }) => ({
+              tabPress: (e) => {
+                navigation.navigate('Actions', { screen: 'Menu' });
+              },
+            })}
+          />
+        ) : (
+          <Tab.Screen name="Contact" component={ContactScreen} options={{ tabBarLabel: 'Contact Us' }} />
+        )
       ) : (
         <Tab.Screen name="Contact" component={ContactScreen} />
       )}
@@ -153,6 +226,7 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={TabNavigator} />
         <Stack.Screen name="PostJob" component={PostJobScreen} />
+        <Stack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
         <Stack.Screen name="EmployerPricingPlans" component={EmployerPricingPlansScreen} />
         <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
         <Stack.Screen

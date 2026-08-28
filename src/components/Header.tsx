@@ -14,12 +14,20 @@ export const Header: React.FC = () => {
 
   const handleProfile = () => {
     setIsMenuOpen(false);
-    navigation.navigate('EmployerProfile');
+    if (user?.role === 'EMPLOYER') {
+      navigation.navigate('EmployerProfile');
+    } else {
+      navigation.navigate('Dashboard', { screen: 'CandidateProfile' });
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsMenuOpen(false);
-    logout();
+    await logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs', params: { screen: 'Home' } }],
+    });
   };
 
   // Profile Icon SVG
