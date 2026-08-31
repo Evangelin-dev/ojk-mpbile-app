@@ -10,6 +10,7 @@ const API_BASE_URL = rawBase.replace(/\/api\/?$/, '').replace(/\/$/, '');
 export const getMyApplications = async (token: string) => {
   const url = `${API_BASE_URL}/api/candidate/my-applications`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -21,6 +22,7 @@ export const getMyApplications = async (token: string) => {
 export const fetchCandidateProfile = async (token: string) => {
   const url = `${API_BASE_URL}/api/candidate/profile`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -32,6 +34,7 @@ export const fetchCandidateProfile = async (token: string) => {
 export const updateCandidateProfile = async (formData: any, token: string) => {
   const url = `${API_BASE_URL}/api/candidate/profile`;
   const response = await axios.put(url, formData, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'multipart/form-data',
@@ -46,6 +49,7 @@ export const updateCandidateProfile = async (formData: any, token: string) => {
 export const fetchCandidateDashboard = async (token: string) => {
   const url = `${API_BASE_URL}/api/candidate/dashboard`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -57,6 +61,7 @@ export const fetchCandidateDashboard = async (token: string) => {
 export const signUrl = async (key: string, token: string) => {
   const url = `${API_BASE_URL}/api/candidate/sign-url?key=${encodeURIComponent(key)}`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;

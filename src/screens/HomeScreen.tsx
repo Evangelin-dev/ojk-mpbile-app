@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,20 +8,28 @@ import {
   Image,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 import { Header } from '../components/Header';
 import { TrendingRoleCard } from '../components/TrendingRoleCard';
 import { TestimonialTrain } from '../components/TestimonialTrain';
+import { useAuth } from '../context/AuthContext';
+import { fetchTestimonials, submitTestimonial } from '../api/auth';
+import { StarIcon } from 'react-native-heroicons/solid';
+import { StarIcon as StarOutlineIcon } from 'react-native-heroicons/outline';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const industries = [
-  { name: 'Textiles', image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=320&fit=crop' },
-  { name: 'Hospitality', image: 'https://images.unsplash.com/photo-1519241047957-be31d7379a5d?w=400&h=320&fit=crop' },
-  { name: 'Retail', image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=320&fit=crop' },
-  { name: 'Construction', image: 'https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?w=400&h=320&fit=crop' },
-  { name: 'Manufacturing', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400&h=320&fit=crop' },
+  { name: 'Textiles', image: '/assets/industries/textiles.jpg' },
+  { name: 'Hospitality', image: '/assets/industries/hospitality.jpg' },
+  { name: 'Retail', image: '/assets/industries/retail.avif' },
+  { name: 'Construction', image: '/assets/industries/construction.jpg' },
+  { name: 'Manufacturing', image: '/assets/industries/manufacturing.jpg' },
 ];
 
 const trendingRoles = [
@@ -29,27 +37,159 @@ const trendingRoles = [
   'Business Dev', 'HR', 'Data Entry', 'Security',
 ];
 
-const testimonials = [
-  { name: 'John Doe', role: 'Software Engineer', rating: 5, text: 'Great platform, found my dream job!', photo: 'https://ui-avatars.com/api/?name=JD&background=0D8ABC&color=fff&size=128' },
-  { name: 'Jane Smith', role: 'Marketing', rating: 5, text: 'The process was seamless and quick.', photo: 'https://ui-avatars.com/api/?name=JS&background=0D8ABC&color=fff&size=128' },
-  { name: 'Sam Wilson', role: 'Sales', rating: 4, text: 'Highly recommend to everyone looking for jobs.', photo: 'https://ui-avatars.com/api/?name=SW&background=0D8ABC&color=fff&size=128' },
-];
-
-const cardData = [
-  { trending: '🔥 Trending', title: 'Jobs for Freshers', color: '#16a34a', borderColor: '#16a34a' },
-  { trending: '🏠 Popular', title: 'Work from Home', color: '#eab308', borderColor: '#eab308' },
-  { trending: '🎓 New', title: 'Internship', color: '#f97316', borderColor: '#f97316' },
-  { trending: '⏰ Flexible', title: 'Part Time', color: '#0d9488', borderColor: '#0d9488' },
-];
+const debounce = (func: (...args: any[]) => any, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
 export default function HomeScreen() {
+  const navigation = useNavigation<any>();
+  const { user, token } = useAuth();
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [experience, setExperience] = useState('');
   const [location, setLocation] = useState('');
+
+  // --- Location Autocomplete ---
+  const [locSuggestions, setLocSuggestions] = useState<any[]>([]);
+  const [isLocSearching, setIsLocSearching] = useState(false);
+
+  // --- Testimonials ---
+  const [testimonialsData, setTestimonialsData] = useState<any[]>([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(true);
+  const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [testimonialContent, setTestimonialContent] = useState('');
+  const [testimonialRating, setTestimonialRating] = useState(5);
+  const [submittingTestimonial, setSubmittingTestimonial] = useState(false);
+
+  useEffect(() => {
+    loadTestimonials();
+  }, []);
+
+  const loadTestimonials = async () => {
+    try {
+      const data = await fetchTestimonials();
+      if (data && data.testimonials) {
+        const approved = data.testimonials
+          .filter((t: any) => t.status === 'APPROVED')
+          .map((t: any) => ({
+            name: t.user?.candidateProfile?.name || 'Anonymous',
+            role: t.user?.role || 'Job Seeker',
+            rating: t.rating,
+            text: t.content,
+            photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.user?.candidateProfile?.name || 'A')}&background=0D8ABC&color=fff&size=128`,
+          }));
+        setTestimonialsData(approved);
+      }
+    } catch (err) {
+      console.error('Failed to load testimonials:', err);
+    } finally {
+      setLoadingTestimonials(false);
+    }
+  };
+
+  const fetchLocationSuggestions = useCallback(
+    debounce(async (text: string) => {
+      const apiKey = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
+      if (!apiKey || !text || text.length < 3) {
+        setLocSuggestions([]);
+        return;
+      }
+      setIsLocSearching(true);
+      const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(
+        text
+      )}&apiKey=${apiKey}&filter=countrycode:in`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        setLocSuggestions(data.features || []);
+      } catch (error) {
+        console.error("Geoapify Error:", error);
+      } finally {
+        setIsLocSearching(false);
+      }
+    }, 500),
+    []
+  );
+
+  const handleLocationChange = (text: string) => {
+    setLocation(text);
+    if (text.length >= 3) {
+      fetchLocationSuggestions(text);
+    } else {
+      setLocSuggestions([]);
+    }
+  };
+
+  const handleSearch = () => {
+    navigation.navigate('Jobs', {
+      screen: 'JobList',
+      params: { q: searchTerm, exp: experience, location: location }
+    });
+  };
+
+  const handleViewAll = () => {
+    if (!user) {
+      navigation.navigate('Login');
+    } else {
+      navigation.navigate('Jobs', { screen: 'JobList' });
+    }
+  };
+
+  const handleEmployerAction = () => {
+    if (user?.role === 'EMPLOYER') {
+      navigation.navigate('Dashboard', { screen: 'EmployerDashboard' });
+    } else {
+      navigation.navigate('Login'); // Or specific EmployerSignIn if exists
+    }
+  };
+
+  const handleAddTestimonial = () => {
+    if (!user) {
+      navigation.navigate('Login');
+    } else {
+      setShowTestimonialModal(true);
+    }
+  };
+
+  const submitMyTestimonial = async () => {
+    if (!testimonialContent.trim()) {
+      Alert.alert('Error', 'Please enter some feedback.');
+      return;
+    }
+    setSubmittingTestimonial(true);
+    try {
+      await submitTestimonial(testimonialContent, testimonialRating, token!);
+      Alert.alert('Success', 'Your testimonial has been submitted for approval.');
+      setShowTestimonialModal(false);
+      setTestimonialContent('');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to submit testimonial.');
+    } finally {
+      setSubmittingTestimonial(false);
+    }
+  };
+
+  const cardData = [
+    { trending: '🔥 Trending', title: 'Jobs for Freshers', color: '#16a34a', borderColor: '#16a34a' },
+    { trending: '🏠 Popular', title: 'Work from Home', color: '#eab308', borderColor: '#eab308' },
+    { trending: '🎓 New', title: 'Internship', color: '#f97316', borderColor: '#f97316' },
+    { trending: '⏰ Flexible', title: 'Part Time', color: '#0d9488', borderColor: '#0d9488' },
+  ];
 
   return (
     <View style={styles.container}>
       <Header />
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
 
         {/* ===== HERO SECTION ===== */}
         <View style={styles.heroSection}>
@@ -85,20 +225,66 @@ export default function HomeScreen() {
               />
             </View>
             <View style={styles.searchDivider} />
+
+            {/* Experience Selector */}
             <View style={styles.searchRow}>
+              <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                <Rect x="4" y="4" width="16" height="16" rx="4" stroke="#9ca3af" strokeWidth={2} />
+                <Path d="M8 12h8" stroke="#9ca3af" strokeWidth={2} />
+              </Svg>
+              <View style={styles.expOptions}>
+                {['fresher', '1-2', '3-5', '5+'].map((exp) => (
+                  <TouchableOpacity
+                    key={exp}
+                    onPress={() => setExperience(exp === experience ? '' : exp)}
+                    style={[styles.expBtn, experience === exp && styles.expBtnActive]}
+                  >
+                    <Text style={[styles.expBtnText, experience === exp && styles.expBtnTextActive]}>
+                      {exp === 'fresher' ? 'Fresher' : `${exp} Yrs`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.searchDivider} />
+
+            <View style={[styles.searchRow, { zIndex: 1000, elevation: 1000 }]}>
               <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
                 <Path d="M12 21c4.97-4.97 8-8.03 8-11A8 8 0 1 0 4 10c0 2.97 3.03 6.03 8 11z" stroke="#9ca3af" strokeWidth={2} />
                 <Circle cx={12} cy={10} r={3} stroke="#9ca3af" strokeWidth={2} />
               </Svg>
-              <TextInput
-                placeholder="City, state, or zip code"
-                placeholderTextColor="#9ca3af"
-                style={styles.searchInput}
-                value={location}
-                onChangeText={setLocation}
-              />
+              <View style={{ flex: 1, position: 'relative' }}>
+                <TextInput
+                  placeholder="City, state, or zip code"
+                  placeholderTextColor="#9ca3af"
+                  style={styles.searchInput}
+                  value={location}
+                  onChangeText={handleLocationChange}
+                  onFocus={() => { if (location.length >= 3) setIsLocSearching(false); }}
+                />
+                {isLocSearching && (
+                  <ActivityIndicator style={{ position: 'absolute', right: 0 }} size="small" color="#9ca3af" />
+                )}
+
+                {locSuggestions.length > 0 && (
+                  <View style={styles.suggestionsList}>
+                    {locSuggestions.map((s, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={styles.suggestionItem}
+                        onPress={() => {
+                          setLocation(s.properties.formatted);
+                          setLocSuggestions([]);
+                        }}
+                      >
+                        <Text style={styles.suggestionText}>{s.properties.formatted}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
-            <TouchableOpacity style={styles.searchButton}>
+            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
               <Text style={styles.searchButtonText}>Search Jobs</Text>
             </TouchableOpacity>
           </View>
@@ -113,10 +299,14 @@ export default function HomeScreen() {
                 key={i}
                 style={[styles.popularCard, { borderColor: card.borderColor }]}
                 activeOpacity={0.8}
+                onPress={handleViewAll}
               >
                 <Text style={styles.cardTrending}>{card.trending}</Text>
                 <Text style={styles.cardTitle}>{card.title}</Text>
-                <TouchableOpacity style={[styles.cardBtn, { borderColor: card.color }]}>
+                <TouchableOpacity
+                  style={[styles.cardBtn, { borderColor: card.color }]}
+                  onPress={handleViewAll}
+                >
                   <Text style={[styles.cardBtnText, { color: card.color }]}>View all →</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -149,12 +339,19 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Trending Roles</Text>
           <View style={styles.rolesGrid}>
             {trendingRoles.map((role, idx) => (
-              <View key={idx} style={styles.roleWrap}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.roleWrap}
+                onPress={handleViewAll}
+              >
                 <TrendingRoleCard role={role} />
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={styles.viewAllBtn}>
+          <TouchableOpacity
+            style={styles.viewAllBtn}
+            onPress={handleViewAll}
+          >
             <Text style={styles.viewAllBtnText}>View All Roles</Text>
           </TouchableOpacity>
         </View>
@@ -163,11 +360,18 @@ export default function HomeScreen() {
         <View style={styles.sectionGreen}>
           <View style={styles.testimonialHeader}>
             <Text style={styles.sectionTitle}>Testimonials</Text>
-            <TouchableOpacity style={styles.addTestimonialBtn}>
+            <TouchableOpacity
+              style={styles.addTestimonialBtn}
+              onPress={handleAddTestimonial}
+            >
               <Text style={styles.addTestimonialText}>Add</Text>
             </TouchableOpacity>
           </View>
-          <TestimonialTrain testimonials={testimonials} />
+          {loadingTestimonials ? (
+            <ActivityIndicator size="small" color="#059669" />
+          ) : (
+            <TestimonialTrain testimonials={testimonialsData.length > 0 ? testimonialsData : []} />
+          )}
         </View>
 
         {/* ===== EMPLOYERS SECTION ===== */}
@@ -194,11 +398,66 @@ export default function HomeScreen() {
             style={styles.employerImage}
           />
 
-          <TouchableOpacity style={styles.postJobBtn}>
+          <TouchableOpacity
+            style={styles.postJobBtn}
+            onPress={handleEmployerAction}
+          >
             <Text style={styles.postJobBtnText}>+ Post a Job</Text>
           </TouchableOpacity>
           <Text style={styles.employerNote}>Free to get started. No credit card required.</Text>
         </View>
+
+        {/* Testimonial Modal */}
+        <Modal
+          visible={showTestimonialModal}
+          transparent
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add your testimonial</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Your Testimonial"
+                multiline
+                numberOfLines={4}
+                value={testimonialContent}
+                onChangeText={setTestimonialContent}
+              />
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>Rating:</Text>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity key={star} onPress={() => setTestimonialRating(star)}>
+                    {star <= testimonialRating ? (
+                      <StarIcon size={24} color="#eab308" />
+                    ) : (
+                      <StarOutlineIcon size={24} color="#d1d5db" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancel}
+                  onPress={() => setShowTestimonialModal(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalSubmit}
+                  onPress={submitMyTestimonial}
+                  disabled={submittingTestimonial}
+                >
+                  {submittingTestimonial ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalSubmitText}>Submit</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* ===== INDUSTRIES ===== */}
         <View style={styles.sectionBg}>
@@ -303,6 +562,54 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
+    color: '#374151',
+    paddingVertical: 8,
+  },
+  expOptions: {
+    flexDirection: 'row',
+    flex: 1,
+    marginLeft: 10,
+    gap: 6,
+  },
+  expBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  expBtnActive: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  expBtnText: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  expBtnTextActive: {
+    color: '#fff',
+  },
+  suggestionsList: {
+    position: 'absolute',
+    top: 36,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    elevation: 5,
+    zIndex: 9999,
+  },
+  suggestionItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  suggestionText: {
+    fontSize: 13,
     color: '#374151',
   },
   searchDivider: {
@@ -562,5 +869,73 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     fontSize: 14,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 12,
+    height: 120,
+    textAlignVertical: 'top',
+    fontSize: 15,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  ratingLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    marginRight: 8,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  modalCancelText: {
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  modalSubmit: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#2563eb',
+  },
+  modalSubmitText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

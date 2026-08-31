@@ -21,10 +21,9 @@ import { fetchJobApplications } from '../api/employer';
 import { Header } from '../components/Header';
 import SupportTicketModal from '../components/SupportTicketModal';
 // NOTE: These libraries need to be installed:
-// npx expo install xlsx expo-file-system expo-sharing
-// import * as XLSX from 'xlsx';
-// import * as FileSystem from 'expo-file-system';
-// import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 const ReportsDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -69,18 +68,7 @@ const ReportsDashboardScreen: React.FC = () => {
         return;
       }
 
-      // Implementation note: Excel generation in React Native requires xlsx + expo-file-system
-      // Since these might not be installed yet, we'll show a success message for now
-      // and provide the logic if the user has the libraries.
-
-      Alert.alert(
-        'Report Ready',
-        `Generated data for ${formattedData.length} applications. Excel export requires 'xlsx' and 'expo-sharing' packages.`,
-        [{ text: 'OK' }]
-      );
-
-      /*
-      // EXCEL EXPORT LOGIC (Requires dependencies):
+      // EXCEL EXPORT LOGIC
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Applications Report");
@@ -88,7 +76,6 @@ const ReportsDashboardScreen: React.FC = () => {
       const filename = FileSystem.documentDirectory + `OJK_Report_${new Date().getTime()}.xlsx`;
       await FileSystem.writeAsStringAsync(filename, base64, { encoding: FileSystem.EncodingType.Base64 });
       await Sharing.shareAsync(filename);
-      */
 
     } catch (error) {
       console.error('Failed to download report:', error);

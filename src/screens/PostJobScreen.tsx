@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -56,10 +57,26 @@ const EDUCATION_OPTIONS = [
 const ENGLISH_LEVEL_OPTIONS = ["No English", "Basic English", "Good English"];
 const CONTACT_PREFERENCE_OPTIONS = ["Call", "WhatsApp", "Email"];
 
+const debounce = (func: (...args: any[]) => any, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
+
 export default function PostJobScreen() {
   const navigation = useNavigation<any>();
   const { token } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
+
+  // --- Location Autocomplete States ---
+  const [jobLocSuggestions, setJobLocSuggestions] = useState<any[]>([]);
+  const [isJobLocSearching, setIsJobLocSearching] = useState(false);
+  const [officeAddrSuggestions, setOfficeAddrSuggestions] = useState<any[]>([]);
+  const [isOfficeAddrSearching, setIsOfficeAddrSearching] = useState(false);
 
   const [formData, setFormData] = useState({
     jobTitle: "",
@@ -93,6 +110,58 @@ export default function PostJobScreen() {
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Trigger location search if applicable
+    if (field === 'location' && value.length >= 3) {
+      fetchLocationSuggestions(value, setJobLocSuggestions, setIsJobLocSearching);
+    } else if (field === 'location') {
+      setJobLocSuggestions([]);
+    }
+
+    if (field === 'officeAddress' && value.length >= 3) {
+      fetchLocationSuggestions(value, setOfficeAddrSuggestions, setIsOfficeAddrSearching);
+    } else if (field === 'officeAddress') {
+      setOfficeAddrSuggestions([]);
+    }
+  };
+
+  const fetchLocationSuggestions = useCallback(
+    debounce(
+      async (
+        text: string,
+        setSuggestions: (s: any[]) => void,
+        setLoading: (l: boolean) => void
+      ) => {
+        const apiKey = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
+        if (!apiKey) return;
+        if (!text || text.length < 3) {
+          setSuggestions([]);
+          return;
+        }
+        setLoading(true);
+        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(
+          text
+        )}&apiKey=${apiKey}&filter=countrycode:in`;
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          setSuggestions(data.features || []);
+        } catch (error) {
+          console.error("[Geoapify] Error:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
+      500
+    ),
+    []
+  );
+
+  const handleSuggestionSelect = (field: string, suggestion: any) => {
+    const formatted = suggestion.properties.formatted || suggestion.properties.name;
+    setFormData(prev => ({ ...prev, [field]: formatted }));
+    if (field === 'location') setJobLocSuggestions([]);
+    if (field === 'officeAddress') setOfficeAddrSuggestions([]);
   };
 
   const handlePerkToggle = (perk: string) => {
@@ -122,7 +191,7 @@ export default function PostJobScreen() {
 
       await publishJob(payload, token);
       Alert.alert("Success", "Job Posted Successfully!");
-      navigation.navigate("Home");
+      navigation.navigate("MainTabs", { screen: "Home" });
     } catch (error: any) {
       Alert.alert("Error", error.response?.data?.message || "Internal server error");
     }
@@ -173,12 +242,33 @@ export default function PostJobScreen() {
             />
 
             <Text style={styles.label}>Job Location *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.location}
-              onChangeText={(val) => handleInputChange("location", val)}
-              placeholder="City, State"
-            />
+            <View style={{ zIndex: 1000, elevation: 5, position: 'relative' }}>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location}
+                  onChangeText={(val) => handleInputChange("location", val)}
+                  placeholder="City, State"
+                />
+                {isJobLocSearching && (
+                  <ActivityIndicator style={styles.inputLoader} size="small" color="#f97316" />
+                )}
+              </View>
+
+              {jobLocSuggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  {jobLocSuggestions.map((s, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={styles.suggestionItem}
+                      onPress={() => handleSuggestionSelect('location', s)}
+                    >
+                      <Text style={styles.suggestionText}>{s.properties.formatted}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
 
             <Text style={styles.label}>Job Type</Text>
             <View style={styles.optionsGrid}>
@@ -229,12 +319,33 @@ export default function PostJobScreen() {
             {formData.workLocation === "Work From Office" && (
               <>
                 <Text style={styles.label}>Office Address</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.officeAddress}
-                  onChangeText={(val) => handleInputChange("officeAddress", val)}
-                  placeholder="Full office address"
-                />
+                <View style={{ zIndex: 1000, elevation: 5, position: 'relative' }}>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.officeAddress}
+                      onChangeText={(val) => handleInputChange("officeAddress", val)}
+                      placeholder="Full office address"
+                    />
+                    {isOfficeAddrSearching && (
+                      <ActivityIndicator style={styles.inputLoader} size="small" color="#f97316" />
+                    )}
+                  </View>
+
+                  {officeAddrSuggestions.length > 0 && (
+                    <View style={styles.suggestionsContainer}>
+                      {officeAddrSuggestions.map((s, i) => (
+                        <TouchableOpacity
+                          key={i}
+                          style={styles.suggestionItem}
+                          onPress={() => handleSuggestionSelect('officeAddress', s)}
+                        >
+                          <Text style={styles.suggestionText}>{s.properties.formatted}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
               </>
             )}
 
@@ -418,7 +529,11 @@ export default function PostJobScreen() {
           <Text style={styles.topBackBtnText}>Back to Jobs</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Post a New Job</Text>
         {renderStepper()}
         {renderStepContent()}
@@ -534,6 +649,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
+    zIndex: 1,
+    overflow: 'visible',
   },
   label: {
     fontSize: 14,
@@ -549,6 +666,42 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 15,
     backgroundColor: '#f8fafc',
+    flex: 1,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  inputLoader: {
+    position: 'absolute',
+    right: 12,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    maxHeight: 250,
+    zIndex: 99999,
+    elevation: 25,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#1e293b',
   },
   textArea: {
     height: 100,

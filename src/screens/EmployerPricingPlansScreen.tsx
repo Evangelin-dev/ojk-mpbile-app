@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { fetchCurrentPlan, createPlanOrder, verifyPlanPayment } from '../api/employer';
 import { Header } from '../components/Header';
+import RazorpayCheckout from 'react-native-razorpay';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -44,41 +45,57 @@ interface CurrentPlan {
 const PLANS_DATA: Plan[] = [
   {
     id: 'FREE',
-    name: 'Free Plan',
+    name: 'FREE',
     price: '₹0',
-    priceDetails: '/lifetime',
-    features: ['1 Job Post', 'Basic Support', 'Standard Visibility'],
+    priceDetails: '',
+    features: [
+      '1 job post included',
+      'Up to 10 candidate applications',
+      '50-profile database limit',
+    ],
     isPopular: false,
   },
   {
     id: 'STARTER',
-    name: 'Starter Plan',
-    price: '₹999',
-    priceDetails: '/month',
-    features: ['5 Job Posts', 'Priority Support', 'Enhanced Visibility', 'Email Notifications'],
+    name: 'STARTER',
+    price: '₹599',
+    priceDetails: '/ job post',
+    features: [
+      '1 job post included',
+      'Unlimited candidate profiles',
+      'Unlimited database search',
+    ],
     isPopular: false,
   },
   {
     id: 'STANDARD',
-    name: 'Standard Plan',
-    price: '₹2499',
-    priceDetails: '/month',
-    features: ['15 Job Posts', 'Dedicated Account Manager', 'Premium Visibility', 'SMS Alerts'],
+    name: 'STANDARD',
+    price: '₹899',
+    priceDetails: '/ job post',
+    features: [
+      '2 job posts included',
+      'Unlimited candidate profiles',
+      'Unlimited database search',
+    ],
     isPopular: true,
   },
   {
     id: 'PRO',
-    name: 'Pro Plan',
-    price: '₹4999',
-    priceDetails: '/month',
-    features: ['Unlimited Job Posts', 'Custom Branding', 'Top Search Results', 'API Access'],
+    name: 'PRO',
+    price: '₹1,499',
+    priceDetails: '',
+    features: [
+      '5 job posts included',
+      'Unlimited applications',
+      'Unlimited database search',
+    ],
     isPopular: false,
   },
 ];
 
 const EmployerPricingPlansScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
@@ -142,29 +159,61 @@ const EmployerPricingPlansScreen: React.FC = () => {
         throw new Error(orderData.message || 'Could not create order');
       }
 
-      // Simulation mode for Expo Go
-      Alert.alert(
-        'Simulate Payment',
-        `Order created for ${plan.name} (${orderData.order.id}). This is a simulation for testing in Expo Go.`,
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => setPurchasingPlan(null) },
-          {
-            text: 'Success',
-            onPress: async () => {
-              try {
-                // NOTE: In simulation mode, the signature check might fail if not handled by backend
-                // This is just to show the UI flow
-                Alert.alert('Success', `Payment simulation complete! Your ${plan.name} request was sent.`);
-                loadCurrentPlan();
-              } catch (err: any) {
-                Alert.alert('Error', 'Verification failed in simulation.');
-              } finally {
-                setPurchasingPlan(null);
-              }
+      const options = {
+        description: `Purchase ${plan.name}`,
+        image: 'https://i.imgur.com/3g7nmJC.png', // Replace with your logo
+        currency: orderData.order.currency,
+        key: orderData.key,
+        amount: orderData.order.amount,
+        name: 'OJK Jobs',
+        order_id: orderData.order.id,
+        prefill: {
+          email: user?.workEmail || '', // Assuming workEmail exists in employer context
+          contact: user?.phone || '',
+          name: user?.full_name || ''
+        },
+        theme: { color: '#fbb040' }
+      };
+
+      RazorpayCheckout.open(options)
+        .then(async (data: any) => {
+          // data contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
+          console.log('Razorpay success response:', data);
+
+          try {
+            // 2. Verify Payment on Backend
+            const verificationPayload = {
+              razorpay_order_id: data.razorpay_order_id,
+              razorpay_payment_id: data.razorpay_payment_id,
+              razorpay_signature: data.razorpay_signature,
+              planType: plan.id // Backend currently uses this, we'll improve it
+            };
+
+            const verifyData = await verifyPlanPayment(verificationPayload, token);
+
+            if (verifyData.success) {
+              Alert.alert('Success', `Payment successful! Your ${plan.name} is now active.`);
+              loadCurrentPlan();
+            } else {
+              Alert.alert('Payment Verification Failed', verifyData.message || 'Failed to verify payment.');
             }
+          } catch (err: any) {
+            console.error('Verification error:', err);
+            Alert.alert('Error', 'Payment verification failed. Please contact support.');
+          } finally {
+            setPurchasingPlan(null);
           }
-        ]
-      );
+        })
+        .catch((error: any) => {
+          console.log('Razorpay Error:', error);
+          if (error.code === 2) {
+            // User cancelled
+            console.log('Payment cancelled by user');
+          } else {
+            Alert.alert('Payment Error', error.description || 'An error occurred during payment.');
+          }
+          setPurchasingPlan(null);
+        });
 
     } catch (error: any) {
       console.error('Purchase initiation error:', error);

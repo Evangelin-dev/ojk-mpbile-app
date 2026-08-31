@@ -10,6 +10,7 @@ const API_BASE_URL = rawBase.replace(/\/api\/?$/, '').replace(/\/$/, '');
 export const fetchCredits = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/credits`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -21,6 +22,7 @@ export const fetchCredits = async (token: string) => {
 export const fetchWalletUsage = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/credits-usage`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -32,6 +34,7 @@ export const fetchWalletUsage = async (token: string) => {
 export const fetchEmployerProfile = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/profile`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -44,6 +47,7 @@ export const updateEmployerProfile = async (formData: any, token: string) => {
   const url = `${API_BASE_URL}/api/employee/profile`;
   const isFormData = formData instanceof FormData;
   const response = await axios.put(url, formData, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
@@ -58,6 +62,7 @@ export const updateEmployerProfile = async (formData: any, token: string) => {
 export const fetchDashboardStats = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/dashboard`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -69,6 +74,7 @@ export const fetchDashboardStats = async (token: string) => {
 export const fetchJobApplications = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/jobs/applications`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -80,6 +86,7 @@ export const fetchJobApplications = async (token: string) => {
 export const publishJob = async (jobData: any, token: string) => {
   const url = `${API_BASE_URL}/api/employee/jobs`;
   const response = await axios.post(url, jobData, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -94,6 +101,7 @@ export const publishJob = async (jobData: any, token: string) => {
 export const fetchCurrentPlan = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/current-plan`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -105,6 +113,7 @@ export const fetchCurrentPlan = async (token: string) => {
 export const createPlanOrder = async (planType: string, token: string) => {
   const url = `${API_BASE_URL}/api/payments/plan/create-order`;
   const response = await axios.post(url, { planType }, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -119,6 +128,7 @@ export const createPlanOrder = async (planType: string, token: string) => {
 export const verifyPlanPayment = async (verificationPayload: any, token: string) => {
   const url = `${API_BASE_URL}/api/payments/plan/verify-payment`;
   const response = await axios.post(url, verificationPayload, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -133,6 +143,7 @@ export const verifyPlanPayment = async (verificationPayload: any, token: string)
 export const createSupportTicket = async (ticketData: { subject: string; message: string }, token: string) => {
   const url = `${API_BASE_URL}/api/support`;
   const response = await axios.post(url, ticketData, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -147,6 +158,7 @@ export const createSupportTicket = async (ticketData: { subject: string; message
 export const searchCandidates = async (searchCriteria: any, token: string) => {
   const url = `${API_BASE_URL}/api/employee/search`;
   const response = await axios.post(url, searchCriteria, {
+    timeout: 10000,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -161,6 +173,7 @@ export const searchCandidates = async (searchCriteria: any, token: string) => {
 export const fetchEmployerJobs = async (token: string) => {
   const url = `${API_BASE_URL}/api/employee/jobs`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -172,6 +185,7 @@ export const fetchEmployerJobs = async (token: string) => {
 export const deleteJob = async (jobId: number, token: string) => {
   const url = `${API_BASE_URL}/api/employee/job/${jobId}/`;
   const response = await axios.delete(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -197,6 +211,7 @@ export const updateJob = async (jobId: number, jobData: any, token: string) => {
 export const addToShortlist = async (candidateId: number, token: string) => {
   const url = `${API_BASE_URL}/api/shortlist/candidates/${candidateId}`;
   const response = await axios.post(url, {}, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -208,6 +223,7 @@ export const addToShortlist = async (candidateId: number, token: string) => {
 export const removeFromShortlist = async (candidateId: number, token: string) => {
   const url = `${API_BASE_URL}/api/shortlist/candidates/${candidateId}`;
   const response = await axios.delete(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -219,6 +235,7 @@ export const removeFromShortlist = async (candidateId: number, token: string) =>
 export const fetchShortlistedCandidates = async (token: string) => {
   const url = `${API_BASE_URL}/api/shortlist/candidates`;
   const response = await axios.get(url, {
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;
@@ -231,6 +248,7 @@ export const fetchBillingHistory = async (params: { page: number; limit: number;
   const url = `${API_BASE_URL}/api/payments/employer/billing`;
   const response = await axios.get(url, {
     params,
+    timeout: 10000,
     headers: { 'Authorization': `Bearer ${token}` },
   });
   return response.data;

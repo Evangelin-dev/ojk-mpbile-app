@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,14 +12,17 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Share,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { fetchJobs } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import EmployerJobsView from './EmployerJobsView';
+import { indianStatesAndDistricts, StateData } from '../utils/indianStatesAndDistricts';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -45,46 +48,169 @@ interface Job {
   employer: Employer;
 }
 
-const states = ["Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "Uttar Pradesh"];
-
 export default function BrowseJobsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const route = useRoute<any>();
   const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [locationTerm, setLocationTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(route.params?.q || '');
+  const [locationTerm, setLocationTerm] = useState(route.params?.location || '');
+  const [experienceTerm, setExperienceTerm] = useState(route.params?.exp || '');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [showStateModal, setShowStateModal] = useState(false);
+  const [showDistrictModal, setShowDistrictModal] = useState(false);
+  const [stateSearchInput, setStateSearchInput] = useState('');
+  const [districtSearchInput, setDistrictSearchInput] = useState('');
+
+  // Location Suggestions
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [isLocationSearching, setIsLocationSearching] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  // Hardcoding the key as a fallback because .env might not be picked up without a full restart
+  const GEOAPIFY_API_KEY = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY || '205ddcae564743f68d28da3a448a889e';
 
   // Filter States
   const [selectedState, setSelectedState] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedDate, setSelectedDate] = useState<string[]>([]);
   const [selectedWorkMode, setSelectedWorkMode] = useState<string[]>([]);
   const [selectedShift, setSelectedShift] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadJobs();
-  }, []);
+  const filteredStates = useMemo(() => {
+    if (!stateSearchInput) return indianStatesAndDistricts;
+    return indianStatesAndDistricts.filter(s =>
+      s.name.toLowerCase().includes(stateSearchInput.toLowerCase())
+    );
+  }, [stateSearchInput]);
 
-  const loadJobs = async () => {
+  const availableDistricts = useMemo(() => {
+    const stateData = indianStatesAndDistricts.find(s => s.name === selectedState);
+    return stateData ? stateData.districts : [];
+  }, [selectedState]);
+
+  const filteredDistricts = useMemo(() => {
+    if (!districtSearchInput) return availableDistricts;
+    return availableDistricts.filter(d =>
+      d.toLowerCase().includes(districtSearchInput.toLowerCase())
+    );
+  }, [districtSearchInput, availableDistricts]);
+
+  const fetchLocationSuggestions = async (text: string) => {
+    if (!GEOAPIFY_API_KEY) {
+      return;
+    }
+    if (!text || text.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    setIsLocationSearching(true);
+    try {
+      const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&apiKey=${GEOAPIFY_API_KEY}&filter=countrycode:in`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setLocationSuggestions(data.features || []);
+    } catch (error) {
+      console.error('Error fetching location suggestions:', error);
+    } finally {
+      setIsLocationSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (locationTerm && locationTerm.length >= 3 && showLocationSuggestions) {
+        fetchLocationSuggestions(locationTerm);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [locationTerm, showLocationSuggestions]);
+
+  useEffect(() => {
+    // If we have params from navigation, update state
+    if (route.params) {
+      const q = route.params.q || '';
+      const loc = route.params.location || '';
+      const exp = route.params.exp || '';
+
+      setSearchTerm(q);
+      setLocationTerm(loc);
+      setExperienceTerm(exp);
+
+      loadJobs(1, q, loc, exp);
+    } else {
+      loadJobs(1);
+    }
+  }, [route.params]);
+
+  const loadJobs = async (pageNumber = 1, searchQ?: string, searchLoc?: string, searchExp?: string) => {
     try {
       setLoading(true);
       setError(null);
 
+      const finalQ = searchQ !== undefined ? searchQ : searchTerm;
+      const finalLoc = searchLoc !== undefined ? searchLoc : locationTerm;
+      const finalExp = searchExp !== undefined ? searchExp : experienceTerm;
+
       const params: any = {
-        q: searchTerm,
-        location: locationTerm || selectedState,
-        datePosted: selectedDate,
-        workMode: selectedWorkMode,
-        shift: selectedShift,
+        page: pageNumber,
+        limit: 10,
       };
 
+      if (finalQ) params.q = finalQ;
+
+      const loc = selectedDistrict || selectedState || finalLoc;
+      if (loc) params.location = loc;
+
+      if (finalExp) params.exp = finalExp;
+
+      // Map display labels to API values
+      if (selectedDate.length > 0) {
+        params.datePosted = selectedDate.map(d => {
+          if (d.includes('24')) return '24h';
+          if (d.includes('3')) return '3d';
+          if (d.includes('7')) return '7d';
+          return d;
+        });
+      }
+
+      if (selectedWorkMode.length > 0) {
+        params.workMode = selectedWorkMode.map(m => {
+          if (m.toLowerCase() === 'work from home') return 'Work From Home';
+          if (m.toLowerCase() === 'work from office') return 'Work From Office';
+          if (m.toLowerCase() === 'field job') return 'Field Job';
+          return m;
+        });
+      }
+
+      if (selectedShift.length > 0) {
+        params.workShift = selectedShift.map(s => {
+          if (s.toLowerCase().includes('day')) return 'day';
+          if (s.toLowerCase().includes('night')) return 'night';
+          if (s.toLowerCase().includes('8 hours')) return '8hours';
+          return s;
+        });
+      }
+
+      console.log('[BrowseJobs] API Params:', params);
       const data = await fetchJobs(params);
-      // Handle both nested 'jobs' key and direct array response
-      const jobsData = Array.isArray(data) ? data : (data.jobs || []);
-      setJobs(jobsData);
+
+      if (data.jobs) {
+        setJobs(data.jobs);
+        setTotalPages(data.totalPages || 1);
+        setTotalJobs(data.total || data.jobs.length);
+        setPage(data.page || pageNumber);
+      } else if (Array.isArray(data)) {
+        setJobs(data);
+        setTotalPages(1);
+        setTotalJobs(data.length);
+      }
     } catch (err) {
       console.error('Failed to fetch jobs:', err);
       setError('Failed to load jobs.');
@@ -93,12 +219,36 @@ export default function BrowseJobsScreen() {
     }
   };
 
-  const toggleFilter = (list: string[], setList: (l: string[]) => void, item: string) => {
-    if (list.includes(item)) {
-      setList(list.filter(i => i !== item));
-    } else {
-      setList([...list, item]);
+  const handleShare = async () => {
+    try {
+      const result = await Share.share({
+        message: 'Check out these job opportunities on OJK Jobs! Download the app now and find your dream job.',
+        url: 'https://ojkjobs.com', // Replace with actual app store link if available
+        title: 'Share Jobs',
+      });
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // shared with activity type of result.activityType
+        } else {
+          // shared
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // dismissed
+      }
+    } catch (error: any) {
+      Alert.alert(error.message);
     }
+  };
+
+  const handleLocationSuggestionClick = (suggestion: any) => {
+    const text = suggestion.properties.formatted || suggestion.properties.name || suggestion.properties.city;
+    setLocationTerm(text);
+    setSelectedState('');
+    setSelectedDistrict('');
+    setLocationSuggestions([]);
+    setShowLocationSuggestions(false);
+    // Optionally trigger search immediately
+    loadJobs(1);
   };
 
   const renderItem = ({ item }: { item: Job }) => (
@@ -144,19 +294,45 @@ export default function BrowseJobsScreen() {
       {/* Search Bar with Filter Toggle */}
       <View style={styles.searchSection}>
         <View style={styles.topSearchRow}>
-          <View style={styles.searchBox}>
-            <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
-              <Circle cx={11} cy={11} r={8} stroke="#9ca3af" strokeWidth={2} />
-              <Path d="M21 21l-4.35-4.35" stroke="#9ca3af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-            <TextInput
-              placeholder="Search Job Title, company..."
-              style={styles.input}
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-              onSubmitEditing={loadJobs}
-              returnKeyType="search"
-            />
+          <View style={{ flex: 1, gap: 8 }}>
+            <View style={styles.searchBox}>
+              <Svg width={18} height={18} fill="none" viewBox="0 0 24 24">
+                <Circle cx={11} cy={11} r={8} stroke="#9ca3af" strokeWidth={2} />
+                <Path d="M21 21l-4.35-4.35" stroke="#9ca3af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <TextInput
+                placeholder="Job title, company..."
+                style={styles.input}
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                onSubmitEditing={() => loadJobs(1)}
+                returnKeyType="search"
+              />
+            </View>
+            <View style={styles.searchBox}>
+              <Svg width={18} height={18} fill="none" viewBox="0 0 24 24">
+                <Path d="M12 21s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 7.2c0 7.3-8 11.8-8 11.8z" stroke="#9ca3af" strokeWidth={2} />
+                <Circle cx={12} cy={9} r={2.5} stroke="#9ca3af" strokeWidth={2} />
+              </Svg>
+              <TextInput
+                placeholder="City, state..."
+                style={styles.input}
+                value={locationTerm}
+                onChangeText={(text) => {
+                  setLocationTerm(text);
+                  setShowLocationSuggestions(true);
+                  if (text) {
+                    setSelectedState('');
+                    setSelectedDistrict('');
+                  }
+                }}
+                onFocus={() => setShowLocationSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
+                onSubmitEditing={() => loadJobs(1)}
+                returnKeyType="search"
+              />
+              {isLocationSearching && <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />}
+            </View>
           </View>
           <TouchableOpacity
             style={styles.filterBtn}
@@ -167,11 +343,28 @@ export default function BrowseJobsScreen() {
             </Svg>
           </TouchableOpacity>
         </View>
+
+        {/* Main Screen Location Suggestions */}
+        {showLocationSuggestions && locationSuggestions.length > 0 && (
+          <View style={styles.suggestionOverlay}>
+            <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="always">
+              {locationSuggestions.map((s, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.suggestionItem}
+                  onPress={() => handleLocationSuggestionClick(s)}
+                >
+                  <Text style={styles.suggestionText}>{s.properties.formatted}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Showing {jobs.length} Jobs</Text>
-        <TouchableOpacity style={styles.shareBtn}>
+        <Text style={styles.resultsTitle}>Showing {totalJobs} Jobs</Text>
+        <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
             <Text style={styles.shareText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -187,7 +380,28 @@ export default function BrowseJobsScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
           refreshing={loading}
-          onRefresh={loadJobs}
+          onRefresh={() => loadJobs(1)}
+          ListFooterComponent={() => (
+            totalPages > 1 ? (
+              <View style={styles.pagination}>
+                <TouchableOpacity
+                  style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]}
+                  onPress={() => page > 1 && loadJobs(page - 1)}
+                  disabled={page === 1}
+                >
+                  <Text style={styles.pageBtnText}>Prev</Text>
+                </TouchableOpacity>
+                <Text style={styles.pageInfo}>Page {page} of {totalPages}</Text>
+                <TouchableOpacity
+                  style={[styles.pageBtn, page === totalPages && styles.pageBtnDisabled]}
+                  onPress={() => page < totalPages && loadJobs(page + 1)}
+                  disabled={page === totalPages}
+                >
+                  <Text style={styles.pageBtnText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          )}
         />
       )}
 
@@ -213,6 +427,16 @@ export default function BrowseJobsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => {
+                setSelectedState('');
+                setSelectedDistrict('');
+                setLocationTerm('');
+                setSelectedDate([]);
+                setSelectedWorkMode([]);
+                setSelectedShift([]);
+              }}>
+                <Text style={[styles.closeBtn, { color: '#3b82f6', marginRight: 15 }]}>Reset</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setShowFilters(false)}>
                 <Text style={styles.closeBtn}>Close</Text>
               </TouchableOpacity>
@@ -229,31 +453,89 @@ export default function BrowseJobsScreen() {
                 onChangeText={setSearchTerm}
               />
 
-              {/* Location */}
-              <Text style={styles.filterLabel}>Location (General Search)</Text>
-              <TextInput
-                placeholder="City, state..."
-                style={styles.filterInput}
-                value={locationTerm}
-                onChangeText={setLocationTerm}
-              />
-
-              {/* State Dropdown Placeholder */}
-              <Text style={styles.filterLabel}>Select State</Text>
-              <View style={styles.dropdownPlaceholder}>
-                <Text style={styles.dropdownText}>{selectedState || 'Select State'}</Text>
-              </View>
-              <View style={styles.stateTags}>
-                {states.map(s => (
+              {/* Experience */}
+              <Text style={styles.filterLabel}>Experience</Text>
+              <View style={styles.optionsGrid}>
+                {['fresher', '1-2', '3-5', '5+'].map((exp) => (
                   <TouchableOpacity
-                    key={s}
-                    style={[styles.stateTag, selectedState === s && styles.stateTagActive]}
-                    onPress={() => setSelectedState(s === selectedState ? '' : s)}
+                    key={exp}
+                    onPress={() => setExperienceTerm(exp === experienceTerm ? '' : exp)}
+                    style={[styles.optionBtn, experienceTerm === exp && styles.optionBtnActive]}
                   >
-                    <Text style={[styles.stateTagText, selectedState === s && styles.stateTagActiveText]}>{s}</Text>
+                    <Text style={[styles.optionText, experienceTerm === exp && styles.optionTextActive]}>
+                      {exp === 'fresher' ? 'Fresher' : `${exp} Years`}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* Location */}
+              <Text style={styles.filterLabel}>Location (General Search)</Text>
+              <View>
+                <TextInput
+                  placeholder="City, state..."
+                  style={styles.filterInput}
+                  value={locationTerm}
+                  onChangeText={(text) => {
+                    setLocationTerm(text);
+                    setShowLocationSuggestions(true);
+                    if (text) {
+                      setSelectedState('');
+                      setSelectedDistrict('');
+                    }
+                  }}
+                  onFocus={() => setShowLocationSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
+                />
+                {showLocationSuggestions && locationSuggestions.length > 0 && (
+                  <View style={styles.modalSuggestionList}>
+                    {locationSuggestions.map((s, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.suggestionItem}
+                        onPress={() => {
+                          handleLocationSuggestionClick(s);
+                          setShowLocationSuggestions(false);
+                        }}
+                      >
+                        <Text style={styles.suggestionText}>{s.properties.formatted}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* State Dropdown */}
+              <Text style={styles.filterLabel}>Select State</Text>
+              <TouchableOpacity
+                style={styles.dropdownPlaceholder}
+                onPress={() => setShowStateModal(true)}
+              >
+                <Text style={selectedState ? styles.dropdownTextSelected : styles.dropdownText}>
+                  {selectedState || 'Select State'}
+                </Text>
+                <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                  <Path d="M19 9l-7 7-7-7" stroke="#64748b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              </TouchableOpacity>
+
+              {/* District Dropdown */}
+              {selectedState !== '' && (
+                <>
+                  <Text style={styles.filterLabel}>Select District</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownPlaceholder}
+                    onPress={() => setShowDistrictModal(true)}
+                  >
+                    <Text style={selectedDistrict ? styles.dropdownTextSelected : styles.dropdownText}>
+                      {selectedDistrict || 'Select District'}
+                    </Text>
+                    <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                      <Path d="M19 9l-7 7-7-7" stroke="#64748b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  </TouchableOpacity>
+                </>
+              )}
 
               {/* Date Posted */}
               <Text style={styles.filterLabel}>Date posted</Text>
@@ -309,6 +591,124 @@ export default function BrowseJobsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* State Selection Modal */}
+      <Modal
+        visible={showStateModal}
+        animationType="fade"
+        transparent={true}
+      >
+        <View style={styles.stateModalOverlay}>
+          <View style={styles.stateModalContent}>
+            <View style={styles.stateModalHeader}>
+              <Text style={styles.stateModalTitle}>Select State</Text>
+              <TouchableOpacity onPress={() => setShowStateModal(false)}>
+                <Text style={styles.closeBtn}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.stateSearchBox}>
+              <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                <Circle cx={11} cy={11} r={8} stroke="#9ca3af" strokeWidth={2} />
+                <Path d="M21 21l-4.35-4.35" stroke="#9ca3af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <TextInput
+                placeholder="Search state..."
+                style={styles.stateSearchInput}
+                value={stateSearchInput}
+                onChangeText={setStateSearchInput}
+              />
+            </View>
+
+            <FlatList
+              data={filteredStates}
+              keyExtractor={(item) => item.name}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.stateItem}
+                  onPress={() => {
+                    setSelectedState(item.name);
+                    setSelectedDistrict('');
+                    setShowStateModal(false);
+                    setStateSearchInput('');
+                  }}
+                >
+                  <Text style={[
+                    styles.stateItemText,
+                    selectedState === item.name && styles.stateItemTextSelected
+                  ]}>
+                    {item.name}
+                  </Text>
+                  {selectedState === item.name && (
+                    <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                      <Path d="M5 13l4 4L19 7" stroke="#2563eb" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  )}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.stateSeparator} />}
+            />
+          </View>
+        </View>
+      </Modal>
+      {/* District Selection Modal */}
+      <Modal
+        visible={showDistrictModal}
+        animationType="fade"
+        transparent={true}
+      >
+        <View style={styles.stateModalOverlay}>
+          <View style={styles.stateModalContent}>
+            <View style={styles.stateModalHeader}>
+              <Text style={styles.stateModalTitle}>Select District</Text>
+              <TouchableOpacity onPress={() => setShowDistrictModal(false)}>
+                <Text style={styles.closeBtn}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.stateSearchBox}>
+              <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                <Circle cx={11} cy={11} r={8} stroke="#9ca3af" strokeWidth={2} />
+                <Path d="M21 21l-4.35-4.35" stroke="#9ca3af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <TextInput
+                placeholder="Search district..."
+                style={styles.stateSearchInput}
+                value={districtSearchInput}
+                onChangeText={setDistrictSearchInput}
+              />
+            </View>
+
+            <FlatList
+              data={filteredDistricts}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.stateItem}
+                  onPress={() => {
+                    setSelectedDistrict(item);
+                    setShowDistrictModal(false);
+                    setDistrictSearchInput('');
+                  }}
+                >
+                  <Text style={[
+                    styles.stateItemText,
+                    selectedDistrict === item && styles.stateItemTextSelected
+                  ]}>
+                    {item}
+                  </Text>
+                  {selectedDistrict === item && (
+                    <Svg width={20} height={20} fill="none" viewBox="0 0 24 24">
+                      <Path d="M5 13l4 4L19 7" stroke="#2563eb" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  )}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.stateSeparator} />}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -330,13 +730,46 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   searchBox: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 44,
+  },
+  suggestionOverlay: {
+    position: 'absolute',
+    top: 110,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 5,
+    zIndex: 2000,
+    maxHeight: 250,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  suggestionList: {
+    paddingVertical: 8,
+  },
+  suggestionItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  modalSuggestionList: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    maxHeight: 200,
   },
   input: {
     flex: 1,
@@ -379,6 +812,33 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: 20,
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 15,
+  },
+  pageBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+  },
+  pageBtnText: {
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  pageInfo: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
   },
   card: {
     backgroundColor: '#fff',
@@ -495,41 +955,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#f8fafc',
   },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#fff',
+  },
+  optionBtnActive: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  optionText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  optionTextActive: {
+    color: '#fff',
+  },
   dropdownPlaceholder: {
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 10,
     padding: 12,
     backgroundColor: '#f8fafc',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   dropdownText: {
     color: '#64748b',
+    fontSize: 14,
   },
-  stateTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
+  dropdownTextSelected: {
+    color: '#1e293b',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  stateTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  stateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  stateModalContent: {
+    backgroundColor: '#fff',
     borderRadius: 20,
+    width: '100%',
+    maxHeight: SCREEN_HEIGHT * 0.7,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  stateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  stateModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+  stateSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 16,
   },
-  stateTagActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+  stateSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#1e293b',
   },
-  stateTagText: {
-    fontSize: 12,
+  stateItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  stateItemText: {
+    fontSize: 15,
     color: '#475569',
   },
-  stateTagActiveText: {
-    color: '#fff',
-    fontWeight: '600',
+  stateItemTextSelected: {
+    color: '#2563eb',
+    fontWeight: '700',
+  },
+  stateSeparator: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
   },
   checkboxRow: {
     flexDirection: 'row',
