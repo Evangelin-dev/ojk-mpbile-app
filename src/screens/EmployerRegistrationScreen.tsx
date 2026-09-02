@@ -113,10 +113,17 @@ export default function EmployerRegistrationScreen() {
       const payload = await createEmployerProfile(formData, token);
       
       // payload usually contains { profile: EmployerProfile }
-      // The web app did: localStorage.setItem("profile", JSON.stringify(actionResult.payload));
+      // Extract the profile data and update global state
+      const profileData = payload.data?.profile || payload.profile || payload;
       
       // Complete the login process
-      await login(token, { ...initialUser, ...payload, hasProfile: true });
+      await login(token, {
+        ...initialUser,
+        ...profileData,
+        full_name: profileData.fullName || initialUser.full_name,
+        profileImage: profileData.profileImage,
+        hasProfile: true
+      });
 
       // Navigate home
       navigation.navigate('MainTabs', { screen: 'Home' });
@@ -182,6 +189,7 @@ export default function EmployerRegistrationScreen() {
               value={form.fullName}
               onChangeText={(t) => setForm({ ...form, fullName: t })}
               placeholder="Enter full name"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -193,6 +201,7 @@ export default function EmployerRegistrationScreen() {
               onChangeText={(t) => setForm({ ...form, mobile: t })}
               keyboardType="number-pad"
               maxLength={10}
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -203,6 +212,7 @@ export default function EmployerRegistrationScreen() {
               value={form.companyName}
               onChangeText={(t) => setForm({ ...form, companyName: t })}
               placeholder="Enter company name"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -221,6 +231,7 @@ export default function EmployerRegistrationScreen() {
               onChangeText={(t) => setForm({ ...form, employees: t.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
               placeholder="e.g. 50"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -233,6 +244,7 @@ export default function EmployerRegistrationScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="name@company.com"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -244,6 +256,7 @@ export default function EmployerRegistrationScreen() {
               onChangeText={(t) => setForm({ ...form, gstNumber: t })}
               placeholder="Enter GST Number"
               autoCapitalize="characters"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -377,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 15,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#e2e8f0',
     color: '#1f2937',
   },
   checkboxRow: {

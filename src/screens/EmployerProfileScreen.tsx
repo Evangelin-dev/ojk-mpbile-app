@@ -51,7 +51,7 @@ interface ApiEmployerProfile {
 
 export default function EmployerProfileScreen() {
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
+  const { token, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -86,6 +86,11 @@ export default function EmployerProfileScreen() {
         profilePhoto: null,
       });
       setProfileImagePreview(userProfile.profileImage);
+
+      // Update global user state with latest profile image
+      if (userProfile.profileImage) {
+        updateUser({ profileImage: userProfile.profileImage });
+      }
     } catch (err: any) {
       if (err.response?.status === 404) {
         Alert.alert("Welcome!", "Please complete your profile to get started.");
@@ -111,7 +116,7 @@ export default function EmployerProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -179,6 +184,12 @@ export default function EmployerProfileScreen() {
       if (updatedProfile) {
         setProfileData(updatedProfile);
         setProfileImagePreview(updatedProfile.profileImage);
+
+        // Update global user state
+        updateUser({
+          full_name: updatedProfile.fullName,
+          profileImage: updatedProfile.profileImage
+        });
       }
 
       Alert.alert("Success", "Profile saved successfully!");
@@ -384,6 +395,7 @@ const Field = ({ label, value, onChangeText, icon, isEditing, keyboardType, maxL
       keyboardType={keyboardType}
       maxLength={maxLength}
       placeholder={`Enter ${label.toLowerCase()}`}
+      placeholderTextColor="#64748b"
     />
   </View>
 );
@@ -593,7 +605,7 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   fieldInput: {
-    backgroundColor: '#fff',
+    backgroundColor: '#e2e8f0',
     borderWidth: 1,
     borderColor: '#cbd5e1',
     borderRadius: 12,

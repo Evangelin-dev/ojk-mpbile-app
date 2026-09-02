@@ -90,9 +90,13 @@ export const fetchJobs = async (params: any = {}) => {
   return response.data;
 };
 
-export const fetchJobById = async (id: number | string) => {
+export const fetchJobById = async (id: number | string, token?: string) => {
   const url = `${API_BASE_URL}/api/public/jobs/${id}`;
-  const response = await axios.get(url, { timeout: 10000 });
+  const headers: any = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const response = await axios.get(url, { headers, timeout: 10000 });
   return response.data;
 };
 

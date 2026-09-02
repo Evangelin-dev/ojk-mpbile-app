@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "ojk-mob-app",
-    "slug": "ojk-mob-app",
+    "name": "OJK Jobs",
+    "slug": "srihari10",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ojk-logo.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -12,7 +12,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/ojk-logo.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -20,10 +20,16 @@
       "package": "com.navafthebot.ojkmobapp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/ojk-logo.png"
     },
     "plugins": [
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d9b6c231-2d36-4e5e-aff2-5acb9c883fda"
+      }
+    },
+    "owner": "srihari10s-team"
   }
 }

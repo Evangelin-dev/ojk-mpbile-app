@@ -16,6 +16,7 @@ import EmployerProfileScreen from '../screens/EmployerProfileScreen';
 import EmployerDashboardScreen from '../screens/EmployerDashboardScreen';
 import EmployerApplicationsScreen from '../screens/EmployerApplicationsScreen';
 import CandidateApplicationsScreen from '../screens/CandidateApplicationsScreen';
+import AppliedJobDetailScreen from '../screens/AppliedJobDetailScreen';
 import CandidateProfileScreen from '../screens/CandidateProfileScreen';
 import CandidateDashboardScreen from '../screens/CandidateDashboardScreen';
 import LearningScreen from '../screens/LearningScreen';
@@ -45,6 +46,7 @@ const Stack = createNativeStackNavigator();
 const JobStack = createNativeStackNavigator();
 const ActionsStack = createNativeStackNavigator();
 const DashboardStack = createNativeStackNavigator();
+const CandidateApplicationStack = createNativeStackNavigator();
 
 // Stack for Dashboard (to keep bottom navbar)
 function DashboardStackNavigator() {
@@ -89,6 +91,16 @@ function ActionsStackNavigator() {
       <ActionsStack.Screen name="SavedSearches" component={SavedSearchesScreen} />
       <ActionsStack.Screen name="Billing" component={BillingScreen} />
     </ActionsStack.Navigator>
+  );
+}
+
+// Stack for Candidate Applications
+function CandidateApplicationStackNavigator() {
+  return (
+    <CandidateApplicationStack.Navigator screenOptions={{ headerShown: false }}>
+      <CandidateApplicationStack.Screen name="ApplicationList" component={CandidateApplicationsScreen} />
+      <CandidateApplicationStack.Screen name="AppliedJobDetail" component={AppliedJobDetailScreen} />
+    </CandidateApplicationStack.Navigator>
   );
 }
 
@@ -151,7 +163,15 @@ function TabNavigator() {
             })}
           />
         ) : (
-          <Tab.Screen name="My Application" component={CandidateApplicationsScreen} />
+          <Tab.Screen
+            name="My Application"
+            component={CandidateApplicationStackNavigator}
+            listeners={({ navigation }) => ({
+              tabPress: (e) => {
+                navigation.navigate('My Application', { screen: 'ApplicationList' });
+              },
+            })}
+          />
         )
       ) : (
         <Tab.Screen

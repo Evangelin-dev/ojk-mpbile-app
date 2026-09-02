@@ -18,6 +18,7 @@ import Svg, { Path } from 'react-native-svg';
 import * as DocumentPicker from 'expo-document-picker';
 import { Header } from '../components/Header';
 import { fetchJobById, applyForJob } from '../api/auth';
+import { getMyApplications } from '../api/candidate';
 import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -50,6 +51,7 @@ interface Job {
   englishLevel: string;
   gender: string;
   description: string;
+  applications?: { candidateId: number | string }[];
 }
 
 export default function JobDetailScreen() {
@@ -62,6 +64,7 @@ export default function JobDetailScreen() {
   const [loading, setLoading] = useState(!params.job);
   const [error, setError] = useState<string | null>(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
 
   // Apply modal state
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -87,18 +90,40 @@ export default function JobDetailScreen() {
 
   useEffect(() => {
     const jobId = params.id || params.job?.id;
-    if (!job && jobId) {
+    if (jobId) {
       loadJob(jobId);
     }
-  }, []);
+  }, [user?.id, token]);
 
   const loadJob = async (id: number | string) => {
     try {
       setLoading(true);
-      const data = await fetchJobById(id);
+      const data = await fetchJobById(id, token || undefined);
       // Handle both nested 'job' key and direct object response
       const jobData = data.job || data;
       setJob(jobData);
+
+      // Check if user already applied
+      if (user?.id && user.role === 'CANDIDATE' && token) {
+        try {
+          // Reliable way: Check the candidate's own applications list
+          const appRes = await getMyApplications(token);
+          const myApps = appRes.applications || [];
+          const hasApplied = myApps.some((a: any) =>
+            String(a.job?.id) === String(id) || String(a.jobId) === String(id)
+          );
+          setAlreadyApplied(hasApplied);
+        } catch (appErr) {
+          console.error('Failed to check user applications:', appErr);
+          // Fallback to job's applications list if available
+          if (jobData.applications) {
+            const hasApplied = jobData.applications.some(
+              (a: any) => String(a.candidateId) === String(user.id) || String(a.candidate_id) === String(user.id)
+            );
+            setAlreadyApplied(hasApplied);
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch job detail:', err);
       setError('Failed to load job details.');
@@ -161,6 +186,7 @@ export default function JobDetailScreen() {
       setShowApplyModal(false);
       setCoverLetter('');
       setNewCvFile(null);
+      setAlreadyApplied(true);
       Alert.alert('Success! 🎉', result.message || 'Your application has been submitted successfully!');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to apply';
@@ -265,8 +291,14 @@ export default function JobDetailScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.applyButtonMain} onPress={handleApplyPress}>
-            <Text style={styles.applyButtonText}>Apply Now</Text>
+          <TouchableOpacity
+            style={[styles.applyButtonMain, alreadyApplied && styles.appliedButton]}
+            onPress={handleApplyPress}
+            disabled={alreadyApplied}
+          >
+            <Text style={styles.applyButtonText}>
+              {alreadyApplied ? 'Already Applied' : 'Apply Now'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -331,7 +363,7 @@ export default function JobDetailScreen() {
             />
             <View>
               <Text style={styles.employerCompanyName}>{job.employer.companyName}</Text>
-              <Text style={styles.employerTag}>Verified Employer on OJK</Text>
+              <Text style={styles.employerTag}>Verified Employer on OJK Jobs</Text>
             </View>
           </View>
           <Text style={styles.companyDesc}>
@@ -348,8 +380,14 @@ export default function JobDetailScreen() {
           <Text style={styles.bottomPriceLabel}>Salary up to</Text>
           <Text style={styles.bottomPriceValue}>₹{job.maxSalary.toLocaleString()}</Text>
         </View>
-        <TouchableOpacity style={styles.bottomApplyBtn} onPress={handleApplyPress}>
-          <Text style={styles.bottomApplyText}>Apply Now</Text>
+        <TouchableOpacity
+          style={[styles.bottomApplyBtn, alreadyApplied && styles.appliedButton]}
+          onPress={handleApplyPress}
+          disabled={alreadyApplied}
+        >
+          <Text style={styles.bottomApplyText}>
+            {alreadyApplied ? 'Applied' : 'Apply Now'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -423,7 +461,7 @@ export default function JobDetailScreen() {
               <TextInput
                 style={styles.modalTextarea}
                 placeholder="Tell the employer why you're a great fit..."
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#64748b"
                 value={coverLetter}
                 onChangeText={setCoverLetter}
                 multiline
@@ -693,6 +731,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  appliedButton: {
+    backgroundColor: '#10b981',
+    opacity: 0.9,
+  },
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -767,7 +809,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     color: '#1f2937',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#e2e8f0',
     minHeight: 100,
   },
   modalPrimaryBtn: {

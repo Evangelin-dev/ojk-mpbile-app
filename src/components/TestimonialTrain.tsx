@@ -16,7 +16,10 @@ interface Props {
 
 export const TestimonialTrain: React.FC<Props> = ({ testimonials }) => {
   const flatListRef = useRef<FlatList>(null);
-  const data = [...testimonials, ...testimonials];
+
+  // If there's only one testimonial, don't duplicate it.
+  // Duplication is usually for infinite loop scrolling.
+  const data = testimonials.length > 1 ? [...testimonials, ...testimonials] : testimonials;
 
   return (
     <FlatList
@@ -25,9 +28,13 @@ export const TestimonialTrain: React.FC<Props> = ({ testimonials }) => {
       horizontal
       showsHorizontalScrollIndicator={false}
       keyExtractor={(_, index) => index.toString()}
-      contentContainerStyle={{ paddingHorizontal: 16 }}
+      contentContainerStyle={[
+        { paddingHorizontal: 16 },
+        testimonials.length === 1 && { width: '100%', justifyContent: 'center', paddingHorizontal: 0 }
+      ]}
+      scrollEnabled={testimonials.length > 1}
       renderItem={({ item, index }) => (
-        <View key={index} style={styles.card}>
+        <View key={index} style={[styles.card, testimonials.length === 1 && { marginRight: 0 }]}>
           <View style={styles.header}>
             <Image source={{ uri: item.photo }} style={styles.avatar} />
             <View style={styles.headerText}>

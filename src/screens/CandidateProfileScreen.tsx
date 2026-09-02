@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Image,
   Linking,
   SafeAreaView,
   StatusBar,
@@ -26,9 +27,13 @@ import {
   ChevronLeftIcon,
   ArrowTopRightOnSquareIcon,
   PlusIcon,
+  PhotoIcon,
+  TrashIcon,
+  ArrowUpTrayIcon,
 } from 'react-native-heroicons/outline';
 import Svg, { Path } from 'react-native-svg';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { fetchCandidateProfile, updateCandidateProfile } from '../api/candidate';
@@ -68,6 +73,7 @@ interface ProfileData {
   additionalDetails?: { languages?: string[] };
   certificates?: Certificate[];
   cvUrl?: string;
+  profileImage?: string | null;
   applications?: Application[];
 }
 
@@ -87,7 +93,7 @@ const ProfileSection: React.FC<{
 
 const CandidateProfileScreen = () => {
   const navigation = useNavigation<any>();
-  const { token, user } = useAuth();
+  const { token, user, updateUser } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -99,6 +105,8 @@ const CandidateProfileScreen = () => {
   const [newCertificates, setNewCertificates] = useState<{ name: string; file: DocumentPicker.DocumentPickerAsset }[]>([]);
   const [newCertName, setNewCertName] = useState('');
   const [newCertFile, setNewCertFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [newProfilePhoto, setNewProfilePhoto] = useState<any>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!token) return;
@@ -109,6 +117,13 @@ const CandidateProfileScreen = () => {
       if (response.profile) {
         setProfile(response.profile);
         setEditedProfile(response.profile);
+        setProfileImagePreview(response.profile.profileImage);
+
+        // Update global user state with name and profile image if available
+        updateUser({
+          full_name: response.profile.name,
+          profileImage: response.profile.profileImage
+        });
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -154,6 +169,39 @@ const CandidateProfileScreen = () => {
     }
   };
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setProfileImagePreview(asset.uri);
+
+      // Prepare for FormData upload
+      const localUri = asset.uri;
+      const filename = localUri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || '');
+      const type = match ? `image/${match[1]}` : `image`;
+
+      setNewProfilePhoto({ uri: localUri, name: filename, type });
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setNewProfilePhoto(null);
+    setProfileImagePreview(null);
+  };
+
   const handleAddCertificate = () => {
     if (newCertName && newCertFile) {
       setNewCertificates([
@@ -177,7 +225,7 @@ const CandidateProfileScreen = () => {
 
       Object.entries(editedProfile).forEach(([key, value]) => {
         if (
-          !['skills', 'additionalDetails', 'certificates', 'applications', 'cvUrl'].includes(key) &&
+          !['skills', 'additionalDetails', 'certificates', 'applications', 'cvUrl', 'profileImage'].includes(key) &&
           value !== null && value !== undefined
         ) {
           formData.append(key, String(value));
@@ -195,6 +243,17 @@ const CandidateProfileScreen = () => {
         } as any);
       }
 
+      if (newProfilePhoto) {
+        formData.append('profilePhoto', {
+          uri: newProfilePhoto.uri,
+          name: newProfilePhoto.name,
+          type: newProfilePhoto.type,
+        } as any);
+      } else if (profileImagePreview === null && profile?.profileImage) {
+        // If user explicitly removed the photo
+        formData.append('removeProfilePhoto', 'true');
+      }
+
       newCertificates.forEach((cert) => {
         formData.append('certificates', {
           uri: Platform.OS === 'ios' ? cert.file.uri.replace('file://', '') : cert.file.uri,
@@ -204,7 +263,16 @@ const CandidateProfileScreen = () => {
         formData.append('certNames', cert.name);
       });
 
-      await updateCandidateProfile(formData, token);
+      const response = await updateCandidateProfile(formData, token);
+
+      // Update global state after success
+      if (response.profile) {
+        updateUser({
+          full_name: response.profile.name,
+          profileImage: response.profile.profileImage
+        });
+      }
+
       Alert.alert('Success', 'Profile updated successfully!');
       setIsEditing(false);
       setNewCvFile(null);
@@ -272,8 +340,24 @@ const CandidateProfileScreen = () => {
         {/* Profile Header Card */}
         <View style={styles.profileHeaderCard}>
           <View style={styles.headerInfo}>
-            <View style={styles.avatarLarge}>
-              <Text style={styles.avatarLargeText}>{data.name?.charAt(0) || 'C'}</Text>
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatarLarge}>
+                {profileImagePreview ? (
+                  <Image source={{ uri: profileImagePreview }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarLargeText}>{data.name?.charAt(0) || 'C'}</Text>
+                )}
+                {isEditing && profileImagePreview && (
+                  <TouchableOpacity style={styles.removePhotoOverlay} onPress={handleRemovePhoto}>
+                    <TrashIcon size={24} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {isEditing && (
+                <TouchableOpacity style={styles.uploadBadge} onPress={handlePickImage}>
+                  <ArrowUpTrayIcon size={14} color="#fff" />
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.headerTextWrap}>
               <Text style={styles.profileName}>{data.name}</Text>
@@ -345,6 +429,7 @@ const CandidateProfileScreen = () => {
                   value={String(data.experienceYears)}
                   onChangeText={(val) => setEditedProfile({ ...data, experienceYears: val })}
                   keyboardType="numeric"
+                  placeholderTextColor="#64748b"
                 />
               ) : (
                 <Text style={styles.valueText}>{data.experienceYears} years</Text>
@@ -358,6 +443,7 @@ const CandidateProfileScreen = () => {
                   value={String(data.expectedSalary)}
                   onChangeText={(val) => setEditedProfile({ ...data, expectedSalary: val })}
                   keyboardType="numeric"
+                  placeholderTextColor="#64748b"
                 />
               ) : (
                 <Text style={styles.valueText}>₹{Number(data.expectedSalary).toLocaleString()}</Text>
@@ -415,6 +501,7 @@ const CandidateProfileScreen = () => {
                       else if(data.education === 'GRADUATE') setEditedProfile({...data, graduationField: val});
                       else setEditedProfile({...data, postGraduateField: val});
                     }}
+                    placeholderTextColor="#64748b"
                   />
                 ) : (
                   <Text style={styles.valueText}>
@@ -434,6 +521,7 @@ const CandidateProfileScreen = () => {
                   placeholder="e.g. React, Developer, Marketing"
                   value={data.keywords}
                   onChangeText={(val) => setEditedProfile({ ...data, keywords: val })}
+                  placeholderTextColor="#64748b"
                 />
               ) : (
                 <Text style={styles.valueText}>{data.keywords || 'None specified'}</Text>
@@ -449,6 +537,7 @@ const CandidateProfileScreen = () => {
                   placeholder="e.g. React, Node.js (comma separated)"
                   value={data.skills.join(', ')}
                   onChangeText={(val) => setEditedProfile({ ...data, skills: val.split(',').map(s => s.trim()) })}
+                  placeholderTextColor="#64748b"
                 />
               ) : (
                 <View style={styles.skillsWrapper}>
@@ -536,6 +625,7 @@ const CandidateProfileScreen = () => {
                   placeholder="Certificate Name"
                   value={newCertName}
                   onChangeText={setNewCertName}
+                  placeholderTextColor="#64748b"
                 />
                 <TouchableOpacity style={styles.filePicker} onPress={() => handlePickDocument('cert')}>
                   <Text style={styles.filePickerText}>{newCertFile ? newCertFile.name : 'Choose File'}</Text>
@@ -649,6 +739,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '65%',
   },
+  avatarContainer: {
+    position: 'relative',
+  },
   avatarLarge: {
     width: 60,
     height: 60,
@@ -658,6 +751,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fde68a',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  uploadBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#fbb040',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  removePhotoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarLargeText: {
     fontSize: 24,
@@ -813,7 +930,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 15,
     color: '#1e293b',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e2e8f0',
   },
   pickerWrapper: {
     flexDirection: 'row',

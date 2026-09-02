@@ -118,7 +118,7 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ visible, onClos
                           value={subject}
                           onChangeText={setSubject}
                           placeholder="e.g., Unable to apply for job"
-                          placeholderTextColor="#94a3b8"
+                          placeholderTextColor="#64748b"
                         />
                       </View>
 
@@ -129,7 +129,7 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ visible, onClos
                           value={message}
                           onChangeText={setMessage}
                           placeholder="Please describe your issue in detail..."
-                          placeholderTextColor="#94a3b8"
+                          placeholderTextColor="#64748b"
                           multiline
                           numberOfLines={5}
                           textAlignVertical="top"
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: '#1e293b',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e2e8f0',
   },
   textArea: {
     height: 120,

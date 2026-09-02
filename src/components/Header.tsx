@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, Platform, Modal, StyleSheet, Pressable, Dimensions, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, Platform, Modal, StyleSheet, Pressable, Dimensions, StatusBar, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -73,7 +73,11 @@ export const Header: React.FC = () => {
               <View style={styles.userSection}>
                 <TouchableOpacity style={styles.avatarBtn} onPress={() => setIsMenuOpen(true)}>
                   <View style={[styles.avatar, { backgroundColor: user.role === 'EMPLOYER' ? '#fbb040' : '#39b54a' }]}>
-                    <ProfileIcon />
+                    {user.profileImage ? (
+                      <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
+                    ) : (
+                      <ProfileIcon />
+                    )}
                   </View>
                   <Svg width={14} height={14} fill="none" viewBox="0 0 24 24" style={{ marginLeft: 4 }}>
                     <Path stroke="#6b7280" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -222,6 +226,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   modalOverlay: {
     flex: 1,

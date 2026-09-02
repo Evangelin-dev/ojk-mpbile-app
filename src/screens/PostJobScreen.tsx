@@ -229,6 +229,7 @@ export default function PostJobScreen() {
               value={formData.jobTitle}
               onChangeText={(val) => handleInputChange("jobTitle", val)}
               placeholder="e.g. Software Developer"
+              placeholderTextColor="#64748b"
             />
 
             <Text style={styles.label}>Job Description *</Text>
@@ -239,6 +240,7 @@ export default function PostJobScreen() {
               multiline
               numberOfLines={4}
               placeholder="Details about the role..."
+              placeholderTextColor="#64748b"
             />
 
             <Text style={styles.label}>Job Location *</Text>
@@ -249,6 +251,7 @@ export default function PostJobScreen() {
                   value={formData.location}
                   onChangeText={(val) => handleInputChange("location", val)}
                   placeholder="City, State"
+                  placeholderTextColor="#64748b"
                 />
                 {isJobLocSearching && (
                   <ActivityIndicator style={styles.inputLoader} size="small" color="#f97316" />
@@ -326,6 +329,7 @@ export default function PostJobScreen() {
                       value={formData.officeAddress}
                       onChangeText={(val) => handleInputChange("officeAddress", val)}
                       placeholder="Full office address"
+                      placeholderTextColor="#64748b"
                     />
                     {isOfficeAddrSearching && (
                       <ActivityIndicator style={styles.inputLoader} size="small" color="#f97316" />
@@ -370,6 +374,7 @@ export default function PostJobScreen() {
                   value={String(formData.minSalary)}
                   onChangeText={(val) => handleInputChange("minSalary", Number(val))}
                   keyboardType="numeric"
+                  placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.half}>
@@ -379,6 +384,7 @@ export default function PostJobScreen() {
                   value={String(formData.maxSalary)}
                   onChangeText={(val) => handleInputChange("maxSalary", Number(val))}
                   keyboardType="numeric"
+                  placeholderTextColor="#64748b"
                 />
               </View>
             </View>
@@ -445,6 +451,7 @@ export default function PostJobScreen() {
               value={formData.experienceType}
               onChangeText={(val) => handleInputChange("experienceType", val)}
               placeholder="e.g. Any, 1-2 years"
+              placeholderTextColor="#64748b"
             />
           </View>
         );
@@ -479,6 +486,7 @@ export default function PostJobScreen() {
                   style={styles.input}
                   value={formData.walkInAddress}
                   onChangeText={(val) => handleInputChange("walkInAddress", val)}
+                  placeholderTextColor="#64748b"
                 />
                 <Text style={styles.label}>Timings</Text>
                 <TextInput
@@ -486,6 +494,7 @@ export default function PostJobScreen() {
                   value={formData.walkInTimings}
                   onChangeText={(val) => handleInputChange("walkInTimings", val)}
                   placeholder="e.g. 10 AM - 4 PM"
+                  placeholderTextColor="#64748b"
                 />
               </>
             )}
@@ -665,7 +674,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e2e8f0',
     flex: 1,
   },
   inputContainer: {

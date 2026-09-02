@@ -157,6 +157,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ job, visible, onClose, onSa
             style={styles.input}
             value={formData.jobTitle}
             onChangeText={(text) => setFormData(p => ({ ...p, jobTitle: text }))}
+            placeholderTextColor="#64748b"
           />
         </View>
 
@@ -168,6 +169,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ job, visible, onClose, onSa
             numberOfLines={4}
             value={formData.description}
             onChangeText={(text) => setFormData(p => ({ ...p, description: text }))}
+            placeholderTextColor="#64748b"
           />
         </View>
 
@@ -198,6 +200,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ job, visible, onClose, onSa
               keyboardType="numeric"
               value={String(formData.minSalary || '')}
               onChangeText={(text) => setFormData(p => ({ ...p, minSalary: Number(text) }))}
+              placeholderTextColor="#64748b"
             />
           </View>
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
@@ -207,6 +210,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ job, visible, onClose, onSa
               keyboardType="numeric"
               value={String(formData.maxSalary || '')}
               onChangeText={(text) => setFormData(p => ({ ...p, maxSalary: Number(text) }))}
+              placeholderTextColor="#64748b"
             />
           </View>
         </View>
@@ -288,6 +292,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ job, visible, onClose, onSa
               value={currentRole}
               onChangeText={setCurrentRole}
               placeholder="e.g., Software Engineer"
+              placeholderTextColor="#64748b"
             />
             <TouchableOpacity onPress={handleAddRole} style={styles.addButton}>
               <Text style={styles.addButtonText}>Add</Text>
@@ -323,6 +328,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ job, visible, onClose, onSa
                 style={styles.input}
                 value={formData.walkInAddress}
                 onChangeText={(text) => setFormData(p => ({ ...p, walkInAddress: text }))}
+                placeholderTextColor="#64748b"
               />
             </View>
             {/* Note: Date pickers are complex in RN, using text for now or simple placeholders */}
@@ -791,7 +797,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#1e293b',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e2e8f0',
   },
   textArea: {
     height: 100,

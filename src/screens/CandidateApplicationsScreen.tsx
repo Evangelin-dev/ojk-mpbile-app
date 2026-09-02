@@ -14,7 +14,6 @@ import {
 import {
   BriefcaseIcon,
   BuildingOffice2Icon,
-  CalendarIcon,
   ChevronRightIcon,
   ClockIcon,
   ArrowTopRightOnSquareIcon,
@@ -22,11 +21,11 @@ import {
   MapPinIcon,
   MagnifyingGlassIcon,
   ExclamationCircleIcon,
-  CreditCardIcon,
 } from 'react-native-heroicons/outline';
 import { useAuth } from '../context/AuthContext';
 import { getMyApplications, signUrl } from '../api/candidate';
 import { Header } from '../components/Header';
+import { useNavigation } from '@react-navigation/native';
 
 interface Employer {
   id: number;
@@ -55,14 +54,6 @@ interface Application {
   job: Job;
 }
 
-const formatSalary = (min: number | null, max: number | null) => {
-  if (!min && !max) return 'Not specified';
-  if (min && max)
-    return `₹${min.toLocaleString()} – ₹${max.toLocaleString()}`;
-  if (min) return `From ₹${min.toLocaleString()}`;
-  return `Up to ₹${max!.toLocaleString()}`;
-};
-
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -79,6 +70,7 @@ const daysAgo = (iso: string) => {
 };
 
 const CandidateApplicationsScreen = () => {
+  const navigation = useNavigation<any>();
   const { token } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,13 +84,11 @@ const CandidateApplicationsScreen = () => {
       const urlObj = new URL(cvUrl);
       let key = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
 
-      // Attempt to sign the URL if possible
       if (token) {
         try {
           const res = await signUrl(key, token);
           await Linking.openURL(res.url);
         } catch (err) {
-          // Fallback to original URL
           await Linking.openURL(cvUrl);
         }
       } else {
@@ -201,6 +191,7 @@ const CandidateApplicationsScreen = () => {
                 value={search}
                 onChangeText={setSearch}
                 style={styles.searchInput}
+                placeholderTextColor="#64748b"
               />
             </View>
           </View>
@@ -223,7 +214,12 @@ const CandidateApplicationsScreen = () => {
         ) : (
           <View style={styles.listContainer}>
             {filtered.map((app) => (
-              <View key={app.id} style={styles.card}>
+              <TouchableOpacity
+                key={app.id}
+                style={styles.card}
+                onPress={() => navigation.navigate('AppliedJobDetail', { application: app })}
+                activeOpacity={0.7}
+              >
                 <View style={styles.cardHeader}>
                   <View style={styles.companyAvatar}>
                     <Text style={styles.avatarText}>{app.job.employer.companyName?.charAt(0) || 'C'}</Text>
@@ -260,6 +256,9 @@ const CandidateApplicationsScreen = () => {
                       {app.job.isActive ? 'Active' : 'Closed'}
                     </Text>
                   </View>
+                  <View style={styles.detailBadge}>
+                    <ChevronRightIcon size={16} color="#2563eb" />
+                  </View>
                 </View>
 
                 {(app.cvUrl || app.coverLetter) && (
@@ -267,7 +266,10 @@ const CandidateApplicationsScreen = () => {
                     {app.cvUrl && (
                       <TouchableOpacity
                         style={styles.cvButton}
-                        onPress={() => openSignedCv(app.cvUrl!, app.id)}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          openSignedCv(app.cvUrl!, app.id);
+                        }}
                         disabled={openingCv === app.id}
                       >
                         {openingCv === app.id ? (
@@ -285,7 +287,7 @@ const CandidateApplicationsScreen = () => {
                     )}
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -387,7 +389,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
@@ -540,6 +542,10 @@ const styles = StyleSheet.create({
   closedTag: {
     backgroundColor: '#f1f5f9',
     borderColor: '#e2e8f0',
+  },
+  detailBadge: {
+    marginLeft: 'auto',
+    padding: 4,
   },
   cardFooter: {
     flexDirection: 'row',

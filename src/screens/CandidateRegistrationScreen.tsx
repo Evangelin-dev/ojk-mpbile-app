@@ -215,8 +215,15 @@ export default function CandidateRegistrationScreen() {
       // API Call
       const payload = await createCandidateProfile(formData, token);
 
-      // Save user
-      await login(token, { ...initialUser, ...payload, hasProfile: true });
+      // Save user with latest profile info
+      const profileData = payload.data?.profile || payload.profile || payload;
+      await login(token, {
+        ...initialUser,
+        ...profileData,
+        full_name: profileData.name || initialUser.full_name,
+        profileImage: profileData.profileImage,
+        hasProfile: true
+      });
 
       // Navigate home
       navigation.navigate('MainTabs', { screen: 'Home' });
@@ -285,6 +292,7 @@ export default function CandidateRegistrationScreen() {
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder="Enter your full name"
+                  placeholderTextColor="#64748b"
                 />
               </View>
 
@@ -331,6 +339,7 @@ export default function CandidateRegistrationScreen() {
                   value={keywords}
                   onChangeText={setKeywords}
                   placeholder="e.g. React, Developer, Marketing"
+                  placeholderTextColor="#64748b"
                 />
               </View>
 
@@ -361,6 +370,7 @@ export default function CandidateRegistrationScreen() {
                   value={previousCompany}
                   onChangeText={setPreviousCompany}
                   placeholder="e.g. Google"
+                  placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.field}>
@@ -370,6 +380,7 @@ export default function CandidateRegistrationScreen() {
                   value={previousPosition}
                   onChangeText={setPreviousPosition}
                   placeholder="e.g. Software Engineer"
+                  placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.field}>
@@ -380,6 +391,7 @@ export default function CandidateRegistrationScreen() {
                   onChangeText={setExperienceYears}
                   keyboardType="numeric"
                   placeholder="e.g. 3"
+                  placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.field}>
@@ -390,6 +402,7 @@ export default function CandidateRegistrationScreen() {
                   onChangeText={setExpectedSalary}
                   keyboardType="numeric"
                   placeholder="e.g. 50000"
+                  placeholderTextColor="#64748b"
                 />
               </View>
             </View>
@@ -425,6 +438,7 @@ export default function CandidateRegistrationScreen() {
                   value={fieldOfStudy}
                   onChangeText={setFieldOfStudy}
                   placeholder="e.g. Computer Science"
+                  placeholderTextColor="#64748b"
                 />
               </View>
             </View>
@@ -439,6 +453,7 @@ export default function CandidateRegistrationScreen() {
                   value={preferredJobType}
                   onChangeText={setPreferredJobType}
                   placeholder="e.g. Full-time, Remote"
+                  placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.field}>
@@ -448,6 +463,7 @@ export default function CandidateRegistrationScreen() {
                   value={preferredWorkLocation}
                   onChangeText={setPreferredWorkLocation}
                   placeholder="e.g. New York, NY"
+                  placeholderTextColor="#64748b"
                 />
               </View>
             </View>
@@ -464,6 +480,7 @@ export default function CandidateRegistrationScreen() {
                     onChangeText={setSkillInput}
                     placeholder="e.g. React Native"
                     onSubmitEditing={addSkill}
+                    placeholderTextColor="#64748b"
                   />
                   <TouchableOpacity style={styles.addBtn} onPress={addSkill}>
                     <Text style={styles.addBtnText}>Add</Text>
@@ -492,6 +509,7 @@ export default function CandidateRegistrationScreen() {
                   value={certNameInput}
                   onChangeText={setCertNameInput}
                   placeholder="Certificate Name (e.g. AWS Certified)"
+                  placeholderTextColor="#64748b"
                 />
                 <TouchableOpacity style={styles.uploadBtn} onPress={() => pickDocument('cert')}>
                   <Text style={styles.uploadBtnText}>
@@ -544,6 +562,7 @@ export default function CandidateRegistrationScreen() {
                     onChangeText={setLanguageInput}
                     placeholder="e.g. Spanish"
                     onSubmitEditing={addLanguage}
+                    placeholderTextColor="#64748b"
                   />
                   <TouchableOpacity style={styles.addBtn} onPress={addLanguage}>
                     <Text style={styles.addBtnText}>Add</Text>
@@ -708,7 +727,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 15,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#e2e8f0',
     color: '#1f2937',
   },
   row: {

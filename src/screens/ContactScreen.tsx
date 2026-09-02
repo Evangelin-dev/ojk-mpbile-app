@@ -126,6 +126,7 @@ export default function ContactScreen() {
                 value={generalFormData.firstName}
                 onChangeText={(text) => setGeneralFormData({ ...generalFormData, firstName: text })}
                 placeholder="First name"
+                placeholderTextColor="#64748b"
               />
             </View>
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
@@ -135,6 +136,7 @@ export default function ContactScreen() {
                 value={generalFormData.lastName}
                 onChangeText={(text) => setGeneralFormData({ ...generalFormData, lastName: text })}
                 placeholder="Last name"
+                placeholderTextColor="#64748b"
               />
             </View>
           </View>
@@ -148,6 +150,7 @@ export default function ContactScreen() {
               placeholder="email@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -159,6 +162,7 @@ export default function ContactScreen() {
               onChangeText={(text) => setGeneralFormData({ ...generalFormData, phone: text })}
               placeholder="+91 XXXXX XXXXX"
               keyboardType="phone-pad"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -169,6 +173,7 @@ export default function ContactScreen() {
               value={generalFormData.subject}
               onChangeText={(text) => setGeneralFormData({ ...generalFormData, subject: text })}
               placeholder="e.g., Question about job postings"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -181,6 +186,7 @@ export default function ContactScreen() {
               placeholder="Describe your issue or question..."
               multiline
               numberOfLines={4}
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -250,6 +256,7 @@ export default function ContactScreen() {
                 value={supportFormData.subject}
                 onChangeText={(text) => setSupportFormData({ ...supportFormData, subject: text })}
                 placeholder="e.g., Issue with my profile"
+                placeholderTextColor="#64748b"
               />
             </View>
 
@@ -262,6 +269,7 @@ export default function ContactScreen() {
                 placeholder="Describe your issue or question..."
                 multiline
                 numberOfLines={4}
+                placeholderTextColor="#64748b"
               />
             </View>
 
@@ -342,7 +350,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e2e8f0',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 8,

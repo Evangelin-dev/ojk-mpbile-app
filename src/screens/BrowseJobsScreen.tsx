@@ -307,6 +307,7 @@ export default function BrowseJobsScreen() {
                 onChangeText={setSearchTerm}
                 onSubmitEditing={() => loadJobs(1)}
                 returnKeyType="search"
+                placeholderTextColor="#64748b"
               />
             </View>
             <View style={styles.searchBox}>
@@ -330,6 +331,7 @@ export default function BrowseJobsScreen() {
                 onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
                 onSubmitEditing={() => loadJobs(1)}
                 returnKeyType="search"
+                placeholderTextColor="#64748b"
               />
               {isLocationSearching && <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />}
             </View>
@@ -451,6 +453,7 @@ export default function BrowseJobsScreen() {
                 style={styles.filterInput}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
+                placeholderTextColor="#64748b"
               />
 
               {/* Experience */}
@@ -486,6 +489,7 @@ export default function BrowseJobsScreen() {
                   }}
                   onFocus={() => setShowLocationSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
+                  placeholderTextColor="#64748b"
                 />
                 {showLocationSuggestions && locationSuggestions.length > 0 && (
                   <View style={styles.modalSuggestionList}>
@@ -617,6 +621,7 @@ export default function BrowseJobsScreen() {
                 style={styles.stateSearchInput}
                 value={stateSearchInput}
                 onChangeText={setStateSearchInput}
+                placeholderTextColor="#64748b"
               />
             </View>
 
@@ -676,6 +681,7 @@ export default function BrowseJobsScreen() {
                 style={styles.stateSearchInput}
                 value={districtSearchInput}
                 onChangeText={setDistrictSearchInput}
+                placeholderTextColor="#64748b"
               />
             </View>
 
@@ -732,7 +738,7 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
@@ -953,7 +959,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 14,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e2e8f0',
   },
   optionsGrid: {
     flexDirection: 'row',
@@ -1032,7 +1038,7 @@ const styles = StyleSheet.create({
   stateSearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,

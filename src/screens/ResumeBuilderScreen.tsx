@@ -405,6 +405,7 @@ const ResumeBuilderScreen = () => {
               placeholder="Full Name"
               value={resumeData.contact.name}
               onChangeText={(val) => handleUpdateContact('name', val)}
+              placeholderTextColor="#64748b"
             />
             <TextInput
               style={styles.input}
@@ -412,6 +413,7 @@ const ResumeBuilderScreen = () => {
               value={resumeData.contact.email}
               onChangeText={(val) => handleUpdateContact('email', val)}
               keyboardType="email-address"
+              placeholderTextColor="#64748b"
             />
             <TextInput
               style={styles.input}
@@ -419,12 +421,14 @@ const ResumeBuilderScreen = () => {
               value={resumeData.contact.phone}
               onChangeText={(val) => handleUpdateContact('phone', val)}
               keyboardType="phone-pad"
+              placeholderTextColor="#64748b"
             />
             <TextInput
               style={styles.input}
               placeholder="LinkedIn URL"
               value={resumeData.contact.linkedin}
               onChangeText={(val) => handleUpdateContact('linkedin', val)}
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -443,6 +447,7 @@ const ResumeBuilderScreen = () => {
               multiline
               value={resumeData.summary}
               onChangeText={(val) => setResumeData(prev => ({ ...prev, summary: val }))}
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -468,18 +473,21 @@ const ResumeBuilderScreen = () => {
                   placeholder="Job Title"
                   value={exp.jobTitle}
                   onChangeText={(val) => handleUpdateExperience(exp.id, 'jobTitle', val)}
+                  placeholderTextColor="#64748b"
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Company"
                   value={exp.company}
                   onChangeText={(val) => handleUpdateExperience(exp.id, 'company', val)}
+                  placeholderTextColor="#64748b"
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Dates (e.g. Jan 2022 - Present)"
                   value={exp.date}
                   onChangeText={(val) => handleUpdateExperience(exp.id, 'date', val)}
+                  placeholderTextColor="#64748b"
                 />
                 <TextInput
                   style={[styles.input, styles.textAreaSm]}
@@ -487,6 +495,7 @@ const ResumeBuilderScreen = () => {
                   multiline
                   value={exp.description}
                   onChangeText={(val) => handleUpdateExperience(exp.id, 'description', val)}
+                  placeholderTextColor="#64748b"
                 />
               </View>
             ))}
@@ -514,18 +523,21 @@ const ResumeBuilderScreen = () => {
                   placeholder="Degree"
                   value={edu.degree}
                   onChangeText={(val) => handleUpdateEducation(edu.id, 'degree', val)}
+                  placeholderTextColor="#64748b"
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="University"
                   value={edu.university}
                   onChangeText={(val) => handleUpdateEducation(edu.id, 'university', val)}
+                  placeholderTextColor="#64748b"
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Dates"
                   value={edu.date}
                   onChangeText={(val) => handleUpdateEducation(edu.id, 'date', val)}
+                  placeholderTextColor="#64748b"
                 />
               </View>
             ))}
@@ -543,6 +555,7 @@ const ResumeBuilderScreen = () => {
                 ...prev,
                 skills: val.split(',').map(s => s.trim()).filter(s => s !== '')
               }))}
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -633,7 +646,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#e2e8f0',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,

@@ -163,7 +163,7 @@ const SearchCandidatesScreen: React.FC = () => {
               placeholder="e.g. Java, Python, React"
               value={keywords}
               onChangeText={setKeywords}
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -175,7 +175,7 @@ const SearchCandidatesScreen: React.FC = () => {
               placeholder="e.g. Mumbai, Bangalore"
               value={city}
               onChangeText={setCity}
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
             />
           </View>
 
@@ -214,7 +214,7 @@ const SearchCandidatesScreen: React.FC = () => {
                 keyboardType="numeric"
                 value={minSalary}
                 onChangeText={setMinSalary}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#64748b"
               />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
@@ -222,7 +222,7 @@ const SearchCandidatesScreen: React.FC = () => {
                 keyboardType="numeric"
                 value={maxSalary}
                 onChangeText={setMaxSalary}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#64748b"
               />
             </View>
           </View>
@@ -402,6 +402,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: '#1e293b',
+    backgroundColor: '#e2e8f0',
   },
   row: {
     flexDirection: 'row',

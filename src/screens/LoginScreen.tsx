@@ -179,7 +179,7 @@ export default function LoginScreen() {
     card: { borderColor: themeColor + '4D' },
     title: { color: themeColor },
     label: { color: themeColor },
-    inputBorder: { borderColor: themeColor + '4D', backgroundColor: themeColor + '1A' },
+    inputBorder: { borderColor: themeColor + '4D', backgroundColor: '#e2e8f0' },
     button: { backgroundColor: themeColor },
   };
 
@@ -211,7 +211,7 @@ export default function LoginScreen() {
                 }}
                 keyboardType="number-pad"
                 placeholder="10-digit mobile number"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#64748b"
                 maxLength={10}
                 autoFocus
               />
@@ -243,7 +243,7 @@ export default function LoginScreen() {
               }}
               keyboardType="number-pad"
               placeholder="000000"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="#64748b"
               maxLength={6}
               textAlign="center"
               autoFocus

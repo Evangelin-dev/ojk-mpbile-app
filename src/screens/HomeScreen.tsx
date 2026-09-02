@@ -77,13 +77,18 @@ export default function HomeScreen() {
       if (data && data.testimonials) {
         const approved = data.testimonials
           .filter((t: any) => t.status === 'APPROVED')
-          .map((t: any) => ({
-            name: t.user?.candidateProfile?.name || 'Anonymous',
-            role: t.user?.role || 'Job Seeker',
-            rating: t.rating,
-            text: t.content,
-            photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.user?.candidateProfile?.name || 'A')}&background=0D8ABC&color=fff&size=128`,
-          }));
+          .map((t: any) => {
+            const candidateName = t.user?.candidateProfile?.name || 'Anonymous';
+            const profileImg = t.user?.candidateProfile?.profileImage;
+
+            return {
+              name: candidateName,
+              role: t.user?.role || 'Job Seeker',
+              rating: t.rating,
+              text: t.content,
+              photo: profileImg || `https://ui-avatars.com/api/?name=${encodeURIComponent(candidateName)}&background=0D8ABC&color=fff&size=128`,
+            };
+          });
         setTestimonialsData(approved);
       }
     } catch (err) {
@@ -218,7 +223,7 @@ export default function HomeScreen() {
               </Svg>
               <TextInput
                 placeholder="Job title, keywords, or company"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#64748b"
                 style={styles.searchInput}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
@@ -256,7 +261,7 @@ export default function HomeScreen() {
               <View style={{ flex: 1, position: 'relative' }}>
                 <TextInput
                   placeholder="City, state, or zip code"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#64748b"
                   style={styles.searchInput}
                   value={location}
                   onChangeText={handleLocationChange}
@@ -292,7 +297,7 @@ export default function HomeScreen() {
 
         {/* ===== POPULAR SEARCHES CARDS ===== */}
         <View style={styles.sectionBg}>
-          <Text style={styles.sectionTitle}>Popular Searches on OJK</Text>
+          <Text style={styles.sectionTitle}>Popular Searches on OJK Jobs</Text>
           <View style={styles.cardGrid}>
             {cardData.map((card, i) => (
               <TouchableOpacity
@@ -423,6 +428,7 @@ export default function HomeScreen() {
                 numberOfLines={4}
                 value={testimonialContent}
                 onChangeText={setTestimonialContent}
+                placeholderTextColor="#64748b"
               />
               <View style={styles.ratingRow}>
                 <Text style={styles.ratingLabel}>Rating:</Text>
@@ -897,6 +903,7 @@ const styles = StyleSheet.create({
     height: 120,
     textAlignVertical: 'top',
     fontSize: 15,
+    backgroundColor: '#e2e8f0',
   },
   ratingRow: {
     flexDirection: 'row',
