@@ -10,6 +10,7 @@ import {
   Linking,
   Dimensions,
   Platform,
+  Image,
 } from 'react-native';
 import {
   XMarkIcon,
@@ -37,6 +38,8 @@ interface DetailedCandidateProfile {
   education: string;
   englishLevel: string;
   cvUrl?: string;
+  profileImage?: string | null;
+  profilePhoto?: string | null;
   certificates?: Certificate[];
   additionalDetails?: {
     languages?: string[];
@@ -108,7 +111,14 @@ const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({ visible, 
                 <View style={styles.headerTop}>
                   <View style={styles.avatarContainer}>
                     <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{getInitials(candidate.name)}</Text>
+                      {(candidate.profileImage || candidate.profilePhoto) ? (
+                        <Image
+                          source={{ uri: candidate.profileImage || candidate.profilePhoto || undefined }}
+                          style={styles.avatarImage}
+                        />
+                      ) : (
+                        <Text style={styles.avatarText}>{getInitials(candidate.name)}</Text>
+                      )}
                     </View>
                     <View style={styles.onlineBadge} />
                   </View>
@@ -286,6 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#fff',
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#fbb040',
@@ -297,6 +308,10 @@ const styles = StyleSheet.create({
         elevation: 6,
       },
     }),
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     color: '#fbb040',

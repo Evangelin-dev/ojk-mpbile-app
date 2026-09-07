@@ -114,15 +114,19 @@ const CandidateProfileScreen = () => {
     setProfileMessage(null);
     try {
       const response = await fetchCandidateProfile(token);
-      if (response.profile) {
-        setProfile(response.profile);
-        setEditedProfile(response.profile);
-        setProfileImagePreview(response.profile.profileImage);
+      const userProfile = response.data?.profile || response.profile;
+
+      if (userProfile) {
+        setProfile(userProfile);
+        setEditedProfile(userProfile);
+
+        const imageUrl = userProfile.profileImage || userProfile.profilePhoto;
+        setProfileImagePreview(imageUrl);
 
         // Update global user state with name and profile image if available
         updateUser({
-          full_name: response.profile.name,
-          profileImage: response.profile.profileImage
+          full_name: userProfile.name,
+          profileImage: imageUrl
         });
       }
     } catch (error) {
@@ -264,12 +268,14 @@ const CandidateProfileScreen = () => {
       });
 
       const response = await updateCandidateProfile(formData, token);
+      const updatedProfile = response.data?.profile || response.profile || response;
 
       // Update global state after success
-      if (response.profile) {
+      if (updatedProfile) {
+        const imageUrl = updatedProfile.profileImage || updatedProfile.profilePhoto;
         updateUser({
-          full_name: response.profile.name,
-          profileImage: response.profile.profileImage
+          full_name: updatedProfile.name,
+          profileImage: imageUrl
         });
       }
 

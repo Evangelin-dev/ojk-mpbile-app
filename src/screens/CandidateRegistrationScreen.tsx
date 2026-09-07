@@ -217,11 +217,13 @@ export default function CandidateRegistrationScreen() {
 
       // Save user with latest profile info
       const profileData = payload.data?.profile || payload.profile || payload;
+      const imageUrl = profileData.profileImage || profileData.profilePhoto;
+
       await login(token, {
         ...initialUser,
         ...profileData,
         full_name: profileData.name || initialUser.full_name,
-        profileImage: profileData.profileImage,
+        profileImage: imageUrl,
         hasProfile: true
       });
 
